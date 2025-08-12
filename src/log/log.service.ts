@@ -4,7 +4,7 @@ import { PurchaseItemRequest } from 'src/interface/Purchase';
 @Injectable()
 export class LogService {
   private logs: any[] = [];
-  private failureRate = 0.9;
+  private failureRate = 0.5;
 
   async createPurchaseLog(transactionId: string, request: PurchaseItemRequest): Promise<void> {
     Logger.log(`[LogService] 구매 로그 기록 시도 (${transactionId})`);
