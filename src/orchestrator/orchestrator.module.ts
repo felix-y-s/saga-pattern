@@ -4,7 +4,10 @@ import { SagaRepositoryService } from './saga-repository.service';
 import { PurchaseEventHandler } from './event-handlers/purchase-event.handler';
 import { PurchaseOrchestrationHandler } from './event-handlers/purchase-orchestration.handler';
 import { EventBusService } from '../events/event-bus.service';
-import { isOrchestrationMode, getSagaPatternConfig } from '../config/saga-pattern.config';
+import {
+  isOrchestrationMode,
+  getSagaPatternConfig,
+} from '../config/saga-pattern.config';
 
 @Module({
   providers: [
@@ -13,10 +16,7 @@ import { isOrchestrationMode, getSagaPatternConfig } from '../config/saga-patter
     PurchaseEventHandler,
     PurchaseOrchestrationHandler,
   ],
-  exports: [
-    ItemPurchaseOrchestratorService,
-    SagaRepositoryService,
-  ],
+  exports: [ItemPurchaseOrchestratorService, SagaRepositoryService],
 })
 export class OrchestratorModule implements OnModuleInit {
   constructor(
@@ -32,11 +32,15 @@ export class OrchestratorModule implements OnModuleInit {
 
   private registerEventHandlers(): void {
     const config = getSagaPatternConfig();
-    console.log(`🔧 OrchestratorModule: Current saga pattern mode = ${config.mode}`);
+    console.log(
+      `🔧 OrchestratorModule: Current saga pattern mode = ${config.mode}`,
+    );
 
     // 오케스트레이션 모드일 때만 핸들러 등록
     if (!isOrchestrationMode()) {
-      console.log('⏸️ Orchestration handlers DISABLED (Choreography mode active)');
+      console.log(
+        '⏸️ Orchestration handlers DISABLED (Choreography mode active)',
+      );
       return;
     }
 
@@ -45,7 +49,7 @@ export class OrchestratorModule implements OnModuleInit {
       'PurchaseInitiated',
       'UserValidated',
       'UserValidationFailed',
-      'ItemGranted', 
+      'ItemGranted',
       'ItemGrantFailed',
       'LogRecorded',
       'LogFailed',
@@ -59,15 +63,24 @@ export class OrchestratorModule implements OnModuleInit {
     ];
 
     // 모니터링용 핸들러 등록 (로깅만 수행, 비즈니스 로직 없음)
-    monitoringEvents.forEach(eventType => {
+    monitoringEvents.forEach((eventType) => {
       this.eventBus.subscribe(eventType, this.purchaseEventHandler);
     });
 
     // 비즈니스 로직용 핸들러 등록 - PurchaseInitiated 이벤트 처리
-    this.eventBus.subscribe('PurchaseInitiated', this.purchaseOrchestrationHandler);
+    this.eventBus.subscribe(
+      'PurchaseInitiated',
+      this.purchaseOrchestrationHandler,
+    );
 
-    console.log(`✅ ORCHESTRATION MODE: Registered ${monitoringEvents.length} monitoring event handlers`);
-    console.log(`✅ ORCHESTRATION MODE: Registered 1 business logic handler for PurchaseInitiated`);
-    console.log('🎯 Orchestration pattern will handle PurchaseInitiated events');
+    console.log(
+      `✅ ORCHESTRATION MODE: Registered ${monitoringEvents.length} monitoring event handlers`,
+    );
+    console.log(
+      `✅ ORCHESTRATION MODE: Registered 1 business logic handler for PurchaseInitiated`,
+    );
+    console.log(
+      '🎯 Orchestration pattern will handle PurchaseInitiated events',
+    );
   }
 }

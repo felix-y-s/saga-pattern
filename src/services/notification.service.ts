@@ -17,26 +17,30 @@ interface NotificationRecord {
 @Injectable()
 export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
-  
+
   // 모의 알림 저장소 (실제로는 데이터베이스 및 외부 알림 서비스)
   private readonly notifications = new Map<string, NotificationRecord>();
-  
+
   // 실패율 시뮬레이션을 위한 설정
   private readonly failureRate = 0.1; // 10% 실패율
-  
+
   async sendNotification(dto: NotificationDto): Promise<NotificationResult> {
-    this.logger.debug(`Sending notification: ${dto.type} to user: ${dto.userId}`);
-    
+    this.logger.debug(
+      `Sending notification: ${dto.type} to user: ${dto.userId}`,
+    );
+
     try {
       const notificationId = this.generateNotificationId();
       const sentAt = new Date();
-      
+
       // 실패 시뮬레이션
       const shouldFail = Math.random() < this.failureRate;
-      
+
       if (shouldFail) {
-        this.logger.warn(`Notification delivery failed (simulated): ${notificationId}`);
-        
+        this.logger.warn(
+          `Notification delivery failed (simulated): ${notificationId}`,
+        );
+
         // 실패 기록
         this.notifications.set(notificationId, {
           notificationId,
@@ -49,7 +53,7 @@ export class NotificationService {
           retryCount: 0,
           metadata: dto.metadata || {},
         });
-        
+
         return {
           success: false,
           notificationId,
@@ -58,7 +62,7 @@ export class NotificationService {
           errorCode: 'DELIVERY_FAILED',
         };
       }
-      
+
       // 성공 기록
       this.notifications.set(notificationId, {
         notificationId,
@@ -71,18 +75,19 @@ export class NotificationService {
         retryCount: 0,
         metadata: dto.metadata || {},
       });
-      
-      this.logger.log(`Notification sent successfully: ${notificationId} to ${dto.userId}`);
-      
+
+      this.logger.log(
+        `Notification sent successfully: ${notificationId} to ${dto.userId}`,
+      );
+
       // 실제 환경에서는 여기서 Push, Email, SMS 등의 서비스 호출
       this.simulateNotificationDelivery(dto);
-      
+
       return {
         success: true,
         notificationId,
         sentAt,
       };
-      
     } catch (error) {
       this.logger.error(`Error sending notification to ${dto.userId}:`, error);
       return {
@@ -97,7 +102,7 @@ export class NotificationService {
 
   async retryNotification(notificationId: string): Promise<NotificationResult> {
     this.logger.debug(`Retrying notification: ${notificationId}`);
-    
+
     const notification = this.notifications.get(notificationId);
     if (!notification) {
       return {
@@ -119,7 +124,9 @@ export class NotificationService {
 
     // 재시도 제한 (3회)
     if (notification.retryCount >= 3) {
-      this.logger.warn(`Max retry attempts reached for notification: ${notificationId}`);
+      this.logger.warn(
+        `Max retry attempts reached for notification: ${notificationId}`,
+      );
       return {
         success: false,
         notificationId,
@@ -131,24 +138,28 @@ export class NotificationService {
 
     // 재시도 실행
     notification.retryCount++;
-    
+
     // 재시도 성공률 높임 (80%)
     const shouldSucceed = Math.random() < 0.8;
-    
+
     if (shouldSucceed) {
       notification.status = 'sent';
       notification.sentAt = new Date();
-      
-      this.logger.log(`Notification retry successful: ${notificationId} (attempt: ${notification.retryCount})`);
-      
+
+      this.logger.log(
+        `Notification retry successful: ${notificationId} (attempt: ${notification.retryCount})`,
+      );
+
       return {
         success: true,
         notificationId,
         sentAt: notification.sentAt,
       };
     } else {
-      this.logger.warn(`Notification retry failed: ${notificationId} (attempt: ${notification.retryCount})`);
-      
+      this.logger.warn(
+        `Notification retry failed: ${notificationId} (attempt: ${notification.retryCount})`,
+      );
+
       return {
         success: false,
         notificationId,
@@ -161,13 +172,15 @@ export class NotificationService {
 
   async getNotificationsByUser(userId: string): Promise<NotificationRecord[]> {
     return Array.from(this.notifications.values())
-      .filter(notification => notification.userId === userId)
+      .filter((notification) => notification.userId === userId)
       .sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime());
   }
 
-  async getNotificationsByTransaction(transactionId: string): Promise<NotificationRecord[]> {
+  async getNotificationsByTransaction(
+    transactionId: string,
+  ): Promise<NotificationRecord[]> {
     return Array.from(this.notifications.values())
-      .filter(notification => notification.transactionId === transactionId)
+      .filter((notification) => notification.transactionId === transactionId)
       .sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime());
   }
 
@@ -178,12 +191,12 @@ export class NotificationService {
     pending: number;
   }> {
     const notifications = Array.from(this.notifications.values());
-    
+
     return {
       total: notifications.length,
-      sent: notifications.filter(n => n.status === 'sent').length,
-      failed: notifications.filter(n => n.status === 'failed').length,
-      pending: notifications.filter(n => n.status === 'pending').length,
+      sent: notifications.filter((n) => n.status === 'sent').length,
+      failed: notifications.filter((n) => n.status === 'failed').length,
+      pending: notifications.filter((n) => n.status === 'pending').length,
     };
   }
 
@@ -194,8 +207,10 @@ export class NotificationService {
   private simulateNotificationDelivery(dto: NotificationDto): void {
     // 실제 환경에서는 여기서 다양한 알림 채널로 메시지 전송
     const channels = this.getNotificationChannels(dto.type);
-    
-    this.logger.debug(`Simulating notification delivery via channels: ${channels.join(', ')}`);
+
+    this.logger.debug(
+      `Simulating notification delivery via channels: ${channels.join(', ')}`,
+    );
     this.logger.debug(`Message: ${dto.message}`);
     this.logger.debug(`Metadata: ${JSON.stringify(dto.metadata)}`);
   }
@@ -229,6 +244,8 @@ export class NotificationService {
   }
 
   async getAllNotifications(): Promise<NotificationRecord[]> {
-    return Array.from(this.notifications.values()).sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime());
+    return Array.from(this.notifications.values()).sort(
+      (a, b) => b.sentAt.getTime() - a.sentAt.getTime(),
+    );
   }
 }

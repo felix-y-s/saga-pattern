@@ -87,7 +87,12 @@ describe('ItemService', () => {
         transactionId: 'txn-5',
       });
 
-      const result = await service.compensateItemGrant('user-123', 'item-potion', 2, 'txn-5');
+      const result = await service.compensateItemGrant(
+        'user-123',
+        'item-potion',
+        2,
+        'txn-5',
+      );
       expect(result).toBe(true);
 
       // Check item stock is restored
@@ -96,7 +101,12 @@ describe('ItemService', () => {
     });
 
     it('should fail to compensate for non-existent item', async () => {
-      const result = await service.compensateItemGrant('user-123', 'non-existent', 1, 'txn-6');
+      const result = await service.compensateItemGrant(
+        'user-123',
+        'non-existent',
+        1,
+        'txn-6',
+      );
       expect(result).toBe(false);
     });
   });

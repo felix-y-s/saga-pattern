@@ -4,7 +4,10 @@ import { EventBusService } from '../../events/event-bus.service';
 import { EventFactory } from '../../events/event-factory';
 import { UserService } from '../../services/user.service';
 import { SagaRepositoryService } from '../../orchestrator/saga-repository.service';
-import { SagaStep, SagaStepResult } from '../../orchestrator/interfaces/saga-state.interface';
+import {
+  SagaStep,
+  SagaStepResult,
+} from '../../orchestrator/interfaces/saga-state.interface';
 import {
   PurchaseInitiatedEvent,
   UserValidatedEvent,
@@ -16,7 +19,9 @@ import {
  * 코레오그래피 패턴에서 PurchaseInitiated 이벤트에 반응하여 사용자 검증을 수행
  */
 @Injectable()
-export class UserValidationHandler implements EventHandler<PurchaseInitiatedEvent> {
+export class UserValidationHandler
+  implements EventHandler<PurchaseInitiatedEvent>
+{
   private readonly logger = new Logger(UserValidationHandler.name);
 
   constructor(
@@ -29,8 +34,10 @@ export class UserValidationHandler implements EventHandler<PurchaseInitiatedEven
   async handle(event: PurchaseInitiatedEvent): Promise<void> {
     const startTime = Date.now();
     const { transactionId, userId, price } = event;
-    
-    this.logger.log(`🔍 Starting user validation for transaction: ${transactionId}`);
+
+    this.logger.log(
+      `🔍 Starting user validation for transaction: ${transactionId}`,
+    );
 
     try {
       // Saga 상태 조회
@@ -67,8 +74,10 @@ export class UserValidationHandler implements EventHandler<PurchaseInitiatedEven
 
       // 다음 단계를 위한 이벤트 발행
       if (validationResult.isValid) {
-        this.logger.log(`✅ User validation successful: ${userId} (${transactionId})`);
-        
+        this.logger.log(
+          `✅ User validation successful: ${userId} (${transactionId})`,
+        );
+
         const nextEvent = new UserValidatedEvent(
           this.eventFactory.generateEventId(),
           this.eventFactory.getCurrentTimestamp(),
@@ -81,8 +90,10 @@ export class UserValidationHandler implements EventHandler<PurchaseInitiatedEven
 
         await this.eventBus.publish(nextEvent);
       } else {
-        this.logger.warn(`❌ User validation failed: ${userId} (${transactionId}) - ${validationResult.reason}`);
-        
+        this.logger.warn(
+          `❌ User validation failed: ${userId} (${transactionId}) - ${validationResult.reason}`,
+        );
+
         const failureEvent = new UserValidationFailedEvent(
           this.eventFactory.generateEventId(),
           this.eventFactory.getCurrentTimestamp(),
@@ -96,7 +107,6 @@ export class UserValidationHandler implements EventHandler<PurchaseInitiatedEven
 
         await this.eventBus.publish(failureEvent);
       }
-
     } catch (error) {
       this.logger.error(`💥 User validation error: ${transactionId}`, error);
 
@@ -113,7 +123,10 @@ export class UserValidationHandler implements EventHandler<PurchaseInitiatedEven
         duration: Date.now() - startTime,
       };
 
-      await this.sagaRepository.updateStepResult(transactionId, errorStepResult);
+      await this.sagaRepository.updateStepResult(
+        transactionId,
+        errorStepResult,
+      );
 
       // 실패 이벤트 발행
       const failureEvent = new UserValidationFailedEvent(

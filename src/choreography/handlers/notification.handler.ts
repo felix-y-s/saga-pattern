@@ -4,7 +4,11 @@ import { EventBusService } from '../../events/event-bus.service';
 import { EventFactory } from '../../events/event-factory';
 import { NotificationService } from '../../services/notification.service';
 import { SagaRepositoryService } from '../../orchestrator/saga-repository.service';
-import { SagaStep, SagaStepResult, SagaStatus } from '../../orchestrator/interfaces/saga-state.interface';
+import {
+  SagaStep,
+  SagaStepResult,
+  SagaStatus,
+} from '../../orchestrator/interfaces/saga-state.interface';
 import {
   LogRecordedEvent,
   NotificationSentEvent,
@@ -15,7 +19,7 @@ import {
 /**
  * 알림 발송을 담당하는 독립적인 이벤트 핸들러
  * 코레오그래피 패턴에서 LogRecorded 이벤트에 반응하여 알림을 발송하고 구매를 완료
- * 
+ *
  * 주의: 알림 실패는 전체 트랜잭션을 실패시키지 않음 (비즈니스 요구사항)
  */
 @Injectable()
@@ -32,8 +36,10 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
   async handle(event: LogRecordedEvent): Promise<void> {
     const startTime = Date.now();
     const { transactionId } = event;
-    
-    this.logger.log(`📢 Starting notification for transaction: ${transactionId}`);
+
+    this.logger.log(
+      `📢 Starting notification for transaction: ${transactionId}`,
+    );
 
     try {
       // Saga 상태 조회
@@ -61,8 +67,11 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
           },
         });
       } catch (notificationError) {
-        this.logger.warn(`⚠️  Notification failed but continuing transaction: ${transactionId}`, notificationError);
-        
+        this.logger.warn(
+          `⚠️  Notification failed but continuing transaction: ${transactionId}`,
+          notificationError,
+        );
+
         notificationResult = {
           success: false,
           reason: notificationError.message || 'Notification service error',
@@ -73,7 +82,9 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
       // Saga 상태 업데이트 (알림 실패와 관계없이)
       const stepResult: SagaStepResult = {
         step: SagaStep.NOTIFICATION,
-        status: notificationResult.success ? 'success' as const : 'failed' as const,
+        status: notificationResult.success
+          ? ('success' as const)
+          : ('failed' as const),
         data: notificationResult,
         executedAt: new Date(),
         duration: Date.now() - startTime,
@@ -85,16 +96,20 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
           message: notificationResult.reason || 'Notification failed',
           details: notificationResult,
         };
-        
-        this.logger.warn(`⚠️  Notification failed (non-critical): ${transactionId} - ${notificationResult.reason}`);
+
+        this.logger.warn(
+          `⚠️  Notification failed (non-critical): ${transactionId} - ${notificationResult.reason}`,
+        );
       }
 
       await this.sagaRepository.updateStepResult(transactionId, stepResult);
 
       // 알림 결과에 따른 이벤트 발행 (정보성)
       if (notificationResult.success) {
-        this.logger.log(`✅ Notification sent successfully: ${notificationResult.notificationId} (${transactionId})`);
-        
+        this.logger.log(
+          `✅ Notification sent successfully: ${notificationResult.notificationId} (${transactionId})`,
+        );
+
         const notificationEvent = new NotificationSentEvent(
           this.eventFactory.generateEventId(),
           this.eventFactory.getCurrentTimestamp(),
@@ -125,9 +140,11 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
 
       // 구매 완료 처리 (알림 성공/실패와 관계없이 진행)
       await this.completePurchase(transactionId, sagaState);
-
     } catch (error) {
-      this.logger.error(`💥 Critical notification handler error: ${transactionId}`, error);
+      this.logger.error(
+        `💥 Critical notification handler error: ${transactionId}`,
+        error,
+      );
 
       // 심각한 에러 상태 업데이트
       const errorStepResult: SagaStepResult = {
@@ -142,7 +159,10 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
         duration: Date.now() - startTime,
       };
 
-      await this.sagaRepository.updateStepResult(transactionId, errorStepResult);
+      await this.sagaRepository.updateStepResult(
+        transactionId,
+        errorStepResult,
+      );
 
       // 그래도 구매는 완료 처리 (알림은 부가 기능)
       try {
@@ -151,7 +171,10 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
           await this.completePurchase(transactionId, sagaState);
         }
       } catch (completionError) {
-        this.logger.error(`💥 Failed to complete purchase after notification error: ${transactionId}`, completionError);
+        this.logger.error(
+          `💥 Failed to complete purchase after notification error: ${transactionId}`,
+          completionError,
+        );
       }
     }
   }
@@ -159,17 +182,24 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
   /**
    * 구매 완료 처리 - Saga 상태를 완료로 마킹하고 완료 이벤트 발행
    */
-  private async completePurchase(transactionId: string, sagaState: any): Promise<void> {
+  private async completePurchase(
+    transactionId: string,
+    sagaState: any,
+  ): Promise<void> {
     try {
       // Saga 상태를 완료로 업데이트
       const completedAt = new Date();
-      await this.sagaRepository.updateSagaStatus(transactionId, SagaStatus.COMPLETED, completedAt);
+      await this.sagaRepository.updateSagaStatus(
+        transactionId,
+        SagaStatus.COMPLETED,
+        completedAt,
+      );
 
       this.logger.log(`🎉 Purchase completed successfully: ${transactionId}`);
 
       // 구매 완료 이벤트 발행
       const { userId, itemId, quantity, price } = sagaState.purchaseData;
-      
+
       const completionEvent = new PurchaseCompletedEvent(
         this.eventFactory.generateEventId(),
         this.eventFactory.getCurrentTimestamp(),
@@ -184,9 +214,11 @@ export class NotificationHandler implements EventHandler<LogRecordedEvent> {
       );
 
       await this.eventBus.publish(completionEvent);
-
     } catch (error) {
-      this.logger.error(`💥 Purchase completion error: ${transactionId}`, error);
+      this.logger.error(
+        `💥 Purchase completion error: ${transactionId}`,
+        error,
+      );
       throw error;
     }
   }

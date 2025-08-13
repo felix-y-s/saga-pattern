@@ -4,7 +4,10 @@ import { EventBusService } from '../../events/event-bus.service';
 import { EventFactory } from '../../events/event-factory';
 import { ItemService } from '../../services/item.service';
 import { SagaRepositoryService } from '../../orchestrator/saga-repository.service';
-import { SagaStep, SagaStepResult } from '../../orchestrator/interfaces/saga-state.interface';
+import {
+  SagaStep,
+  SagaStepResult,
+} from '../../orchestrator/interfaces/saga-state.interface';
 import {
   UserValidatedEvent,
   ItemGrantedEvent,
@@ -29,7 +32,7 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
   async handle(event: UserValidatedEvent): Promise<void> {
     const startTime = Date.now();
     const { transactionId, userId } = event;
-    
+
     this.logger.log(`📦 Starting item grant for transaction: ${transactionId}`);
 
     try {
@@ -52,7 +55,9 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
       // Saga 상태 업데이트
       const stepResult: SagaStepResult = {
         step: SagaStep.ITEM_GRANT,
-        status: grantResult.success ? 'success' as const : 'failed' as const,
+        status: grantResult.success
+          ? ('success' as const)
+          : ('failed' as const),
         data: grantResult,
         executedAt: new Date(),
         duration: Date.now() - startTime,
@@ -70,8 +75,10 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
 
       // 다음 단계를 위한 이벤트 발행
       if (grantResult.success) {
-        this.logger.log(`✅ Item grant successful: ${itemId} x${quantity} to ${userId} (${transactionId})`);
-        
+        this.logger.log(
+          `✅ Item grant successful: ${itemId} x${quantity} to ${userId} (${transactionId})`,
+        );
+
         const nextEvent = new ItemGrantedEvent(
           this.eventFactory.generateEventId(),
           this.eventFactory.getCurrentTimestamp(),
@@ -85,8 +92,10 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
 
         await this.eventBus.publish(nextEvent);
       } else {
-        this.logger.warn(`❌ Item grant failed: ${itemId} for ${userId} (${transactionId}) - ${grantResult.reason}`);
-        
+        this.logger.warn(
+          `❌ Item grant failed: ${itemId} for ${userId} (${transactionId}) - ${grantResult.reason}`,
+        );
+
         const failureEvent = new ItemGrantFailedEvent(
           this.eventFactory.generateEventId(),
           this.eventFactory.getCurrentTimestamp(),
@@ -101,7 +110,6 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
 
         await this.eventBus.publish(failureEvent);
       }
-
     } catch (error) {
       this.logger.error(`💥 Item grant error: ${transactionId}`, error);
 
@@ -118,7 +126,10 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
         duration: Date.now() - startTime,
       };
 
-      await this.sagaRepository.updateStepResult(transactionId, errorStepResult);
+      await this.sagaRepository.updateStepResult(
+        transactionId,
+        errorStepResult,
+      );
 
       // 실패 이벤트 발행
       const sagaState = await this.sagaRepository.findById(transactionId);

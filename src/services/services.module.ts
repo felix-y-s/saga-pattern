@@ -6,17 +6,7 @@ import { NotificationService } from './notification.service';
 
 @Global()
 @Module({
-  providers: [
-    UserService,
-    ItemService,
-    LogService,
-    NotificationService,
-  ],
-  exports: [
-    UserService,
-    ItemService,
-    LogService,
-    NotificationService,
-  ],
+  providers: [UserService, ItemService, LogService, NotificationService],
+  exports: [UserService, ItemService, LogService, NotificationService],
 })
 export class ServicesModule {}

@@ -1,22 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LogRecordDto } from '../dtos/purchase-request.dto';
-import { LogRecordResult, PurchaseLogEntry } from '../interfaces/domain-services.interface';
+import {
+  LogRecordResult,
+  PurchaseLogEntry,
+} from '../interfaces/domain-services.interface';
 
 @Injectable()
 export class LogService {
   private readonly logger = new Logger(LogService.name);
-  
+
   // 모의 로그 저장소 (실제로는 데이터베이스)
   private readonly logs = new Map<string, PurchaseLogEntry>();
 
   async recordLog(dto: LogRecordDto): Promise<LogRecordResult> {
-    this.logger.debug(`Recording log for transaction: ${dto.transactionId}, step: ${dto.step}`);
-    
+    this.logger.debug(
+      `Recording log for transaction: ${dto.transactionId}, step: ${dto.step}`,
+    );
+
     try {
       // 로그 ID 생성
       const logId = this.generateLogId();
       const recordedAt = new Date();
-      
+
       const logEntry: PurchaseLogEntry = {
         logId,
         transactionId: dto.transactionId,
@@ -29,20 +34,24 @@ export class LogService {
         createdAt: recordedAt,
         metadata: dto.metadata || {},
       };
-      
+
       // 로그 저장
       this.logs.set(logId, logEntry);
       throw new Error('TEST~~~');
-      this.logger.log(`Log recorded successfully: ${logId} for transaction ${dto.transactionId}`);
-      
+      this.logger.log(
+        `Log recorded successfully: ${logId} for transaction ${dto.transactionId}`,
+      );
+
       return {
         success: true,
         logId,
         recordedAt,
       };
-      
     } catch (error) {
-      this.logger.error(`Error recording log for transaction ${dto.transactionId}:`, error);
+      this.logger.error(
+        `Error recording log for transaction ${dto.transactionId}:`,
+        error,
+      );
       return {
         success: false,
         logId: '',
@@ -53,19 +62,21 @@ export class LogService {
     }
   }
 
-  async getLogsByTransaction(transactionId: string): Promise<PurchaseLogEntry[]> {
+  async getLogsByTransaction(
+    transactionId: string,
+  ): Promise<PurchaseLogEntry[]> {
     const transactionLogs = Array.from(this.logs.values())
-      .filter(log => log.transactionId === transactionId)
+      .filter((log) => log.transactionId === transactionId)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    
+
     return transactionLogs;
   }
 
   async getLogsByUser(userId: string): Promise<PurchaseLogEntry[]> {
     const userLogs = Array.from(this.logs.values())
-      .filter(log => log.userId === userId)
+      .filter((log) => log.userId === userId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    
+
     return userLogs;
   }
 
@@ -73,22 +84,25 @@ export class LogService {
     return this.logs.get(logId) || null;
   }
 
-  async updateLogStatus(logId: string, status: 'success' | 'failed' | 'compensated', metadata?: Record<string, any>): Promise<boolean> {
+  async updateLogStatus(
+    logId: string,
+    status: 'success' | 'failed' | 'compensated',
+    metadata?: Record<string, any>,
+  ): Promise<boolean> {
     try {
       const log = this.logs.get(logId);
       if (!log) {
         this.logger.warn(`Log not found for update: ${logId}`);
         return false;
       }
-      
+
       log.status = status;
       if (metadata) {
         log.metadata = { ...log.metadata, ...metadata };
       }
-      
+
       this.logger.debug(`Log status updated: ${logId} -> ${status}`);
       return true;
-      
     } catch (error) {
       this.logger.error(`Error updating log status ${logId}:`, error);
       return false;
@@ -102,16 +116,18 @@ export class LogService {
     compensated: number;
   }> {
     let logsToAnalyze = Array.from(this.logs.values());
-    
+
     if (userId) {
-      logsToAnalyze = logsToAnalyze.filter(log => log.userId === userId);
+      logsToAnalyze = logsToAnalyze.filter((log) => log.userId === userId);
     }
-    
+
     return {
       total: logsToAnalyze.length,
-      successful: logsToAnalyze.filter(log => log.status === 'success').length,
-      failed: logsToAnalyze.filter(log => log.status === 'failed').length,
-      compensated: logsToAnalyze.filter(log => log.status === 'compensated').length,
+      successful: logsToAnalyze.filter((log) => log.status === 'success')
+        .length,
+      failed: logsToAnalyze.filter((log) => log.status === 'failed').length,
+      compensated: logsToAnalyze.filter((log) => log.status === 'compensated')
+        .length,
     };
   }
 
@@ -126,6 +142,8 @@ export class LogService {
   }
 
   async getAllLogs(): Promise<PurchaseLogEntry[]> {
-    return Array.from(this.logs.values()).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return Array.from(this.logs.values()).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   }
 }

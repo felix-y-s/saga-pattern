@@ -5,7 +5,7 @@ import { PurchaseInitiatedEvent } from './purchase-events';
 
 class MockEventHandler implements EventHandler<PurchaseInitiatedEvent> {
   public handledEvents: PurchaseInitiatedEvent[] = [];
-  
+
   async handle(event: PurchaseInitiatedEvent): Promise<void> {
     this.handledEvents.push(event);
   }
@@ -35,9 +35,9 @@ describe('EventBusService', () => {
   describe('subscribe', () => {
     it('should subscribe handler to event type', () => {
       const handler = new MockEventHandler();
-      
+
       service.subscribe('PurchaseInitiated', handler);
-      
+
       expect(service.getSubscriberCount('PurchaseInitiated')).toBe(1);
       expect(service.getSubscribers('PurchaseInitiated')).toContain(handler);
     });
@@ -45,10 +45,10 @@ describe('EventBusService', () => {
     it('should allow multiple handlers for same event type', () => {
       const handler1 = new MockEventHandler();
       const handler2 = new MockEventHandler();
-      
+
       service.subscribe('PurchaseInitiated', handler1);
       service.subscribe('PurchaseInitiated', handler2);
-      
+
       expect(service.getSubscriberCount('PurchaseInitiated')).toBe(2);
     });
   });
@@ -56,19 +56,19 @@ describe('EventBusService', () => {
   describe('unsubscribe', () => {
     it('should unsubscribe handler from event type', () => {
       const handler = new MockEventHandler();
-      
+
       service.subscribe('PurchaseInitiated', handler);
       service.unsubscribe('PurchaseInitiated', handler);
-      
+
       expect(service.getSubscriberCount('PurchaseInitiated')).toBe(0);
     });
 
     it('should remove event type when no handlers remain', () => {
       const handler = new MockEventHandler();
-      
+
       service.subscribe('PurchaseInitiated', handler);
       service.unsubscribe('PurchaseInitiated', handler);
-      
+
       expect(service.getAllEventTypes()).not.toContain('PurchaseInitiated');
     });
   });
@@ -87,10 +87,10 @@ describe('EventBusService', () => {
         100,
         'txn-1',
       );
-      
+
       service.subscribe('PurchaseInitiated', handler);
       await service.publish(event);
-      
+
       expect(handler.handledEvents).toHaveLength(1);
       expect(handler.handledEvents[0]).toBe(event);
     });
@@ -109,11 +109,11 @@ describe('EventBusService', () => {
         100,
         'txn-1',
       );
-      
+
       service.subscribe('PurchaseInitiated', handler1);
       service.subscribe('PurchaseInitiated', handler2);
       await service.publish(event);
-      
+
       expect(handler1.handledEvents).toHaveLength(1);
       expect(handler2.handledEvents).toHaveLength(1);
     });
@@ -130,7 +130,7 @@ describe('EventBusService', () => {
         100,
         'txn-1',
       );
-      
+
       await expect(service.publish(event)).resolves.not.toThrow();
     });
 
@@ -147,9 +147,9 @@ describe('EventBusService', () => {
         100,
         'txn-1',
       );
-      
+
       service.subscribe('PurchaseInitiated', failingHandler);
-      
+
       await expect(service.publish(event)).rejects.toThrow('Handler failed');
     });
   });
@@ -157,10 +157,10 @@ describe('EventBusService', () => {
   describe('clear', () => {
     it('should clear all handlers', () => {
       const handler = new MockEventHandler();
-      
+
       service.subscribe('PurchaseInitiated', handler);
       service.clear();
-      
+
       expect(service.getAllEventTypes()).toHaveLength(0);
       expect(service.getSubscriberCount('PurchaseInitiated')).toBe(0);
     });

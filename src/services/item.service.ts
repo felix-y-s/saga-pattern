@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ItemGrantDto } from '../dtos/purchase-request.dto';
-import { ItemGrantResult, ItemInfo } from '../interfaces/domain-services.interface';
+import {
+  ItemGrantResult,
+  ItemInfo,
+} from '../interfaces/domain-services.interface';
 
 interface UserInventory {
   itemId: string;
@@ -11,24 +14,65 @@ interface UserInventory {
 @Injectable()
 export class ItemService {
   private readonly logger = new Logger(ItemService.name);
-  
+
   // 모의 아이템 데이터베이스
   private readonly items = new Map<string, ItemInfo>([
-    ['item-sword', { itemId: 'item-sword', name: 'Magic Sword', price: 100, stock: 50, isAvailable: true }],
-    ['item-potion', { itemId: 'item-potion', name: 'Health Potion', price: 20, stock: 100, isAvailable: true }],
-    ['item-out-of-stock', { itemId: 'item-out-of-stock', name: 'Rare Gem', price: 500, stock: 0, isAvailable: true }],
-    ['item-disabled', { itemId: 'item-disabled', name: 'Disabled Item', price: 50, stock: 10, isAvailable: false }],
+    [
+      'item-sword',
+      {
+        itemId: 'item-sword',
+        name: 'Magic Sword',
+        price: 100,
+        stock: 50,
+        isAvailable: true,
+      },
+    ],
+    [
+      'item-potion',
+      {
+        itemId: 'item-potion',
+        name: 'Health Potion',
+        price: 20,
+        stock: 100,
+        isAvailable: true,
+      },
+    ],
+    [
+      'item-out-of-stock',
+      {
+        itemId: 'item-out-of-stock',
+        name: 'Rare Gem',
+        price: 500,
+        stock: 0,
+        isAvailable: true,
+      },
+    ],
+    [
+      'item-disabled',
+      {
+        itemId: 'item-disabled',
+        name: 'Disabled Item',
+        price: 50,
+        stock: 10,
+        isAvailable: false,
+      },
+    ],
   ]);
 
   // 사용자 인벤토리 (실제로는 데이터베이스)
-  private readonly userInventories = new Map<string, Map<string, UserInventory>>();
+  private readonly userInventories = new Map<
+    string,
+    Map<string, UserInventory>
+  >();
 
   async grantItem(dto: ItemGrantDto): Promise<ItemGrantResult> {
-    this.logger.debug(`Granting item: ${dto.itemId} to user: ${dto.userId}, quantity: ${dto.quantity}`);
-    
+    this.logger.debug(
+      `Granting item: ${dto.itemId} to user: ${dto.userId}, quantity: ${dto.quantity}`,
+    );
+
     try {
       const item = this.items.get(dto.itemId);
-      
+
       if (!item) {
         this.logger.warn(`Item not found: ${dto.itemId}`);
         return {
@@ -56,7 +100,9 @@ export class ItemService {
       }
 
       if (item.stock < dto.quantity) {
-        this.logger.warn(`Insufficient stock: ${dto.itemId}, requested: ${dto.quantity}, available: ${item.stock}`);
+        this.logger.warn(
+          `Insufficient stock: ${dto.itemId}, requested: ${dto.quantity}, available: ${item.stock}`,
+        );
         return {
           success: false,
           userId: dto.userId,
@@ -74,9 +120,11 @@ export class ItemService {
       // 사용자 인벤토리에 아이템 추가
       const grantedAt = new Date();
       this.addToUserInventory(dto.userId, dto.itemId, dto.quantity, grantedAt);
-      
-      this.logger.log(`Item granted successfully: ${dto.itemId} x${dto.quantity} to ${dto.userId}`);
-      
+
+      this.logger.log(
+        `Item granted successfully: ${dto.itemId} x${dto.quantity} to ${dto.userId}`,
+      );
+
       return {
         success: true,
         userId: dto.userId,
@@ -84,9 +132,11 @@ export class ItemService {
         quantity: dto.quantity,
         grantedAt,
       };
-      
     } catch (error) {
-      this.logger.error(`Error granting item ${dto.itemId} to ${dto.userId}:`, error);
+      this.logger.error(
+        `Error granting item ${dto.itemId} to ${dto.userId}:`,
+        error,
+      );
       return {
         success: false,
         userId: dto.userId,
@@ -99,9 +149,16 @@ export class ItemService {
     }
   }
 
-  async compensateItemGrant(userId: string, itemId: string, quantity: number, transactionId: string): Promise<boolean> {
-    this.logger.debug(`Compensating item grant: ${itemId} x${quantity} from user: ${userId}, transaction: ${transactionId}`);
-    
+  async compensateItemGrant(
+    userId: string,
+    itemId: string,
+    quantity: number,
+    transactionId: string,
+  ): Promise<boolean> {
+    this.logger.debug(
+      `Compensating item grant: ${itemId} x${quantity} from user: ${userId}, transaction: ${transactionId}`,
+    );
+
     try {
       const item = this.items.get(itemId);
       if (!item) {
@@ -114,12 +171,17 @@ export class ItemService {
 
       // 사용자 인벤토리에서 제거
       this.removeFromUserInventory(userId, itemId, quantity);
-      
-      this.logger.log(`Item grant compensated: ${itemId} x${quantity} from ${userId}`);
-      
+
+      this.logger.log(
+        `Item grant compensated: ${itemId} x${quantity} from ${userId}`,
+      );
+
       return true;
     } catch (error) {
-      this.logger.error(`Error compensating item grant ${itemId} from ${userId}:`, error);
+      this.logger.error(
+        `Error compensating item grant ${itemId} from ${userId}:`,
+        error,
+      );
       return false;
     }
   }
@@ -133,14 +195,19 @@ export class ItemService {
     return inventory ? Array.from(inventory.values()) : [];
   }
 
-  private addToUserInventory(userId: string, itemId: string, quantity: number, grantedAt: Date): void {
+  private addToUserInventory(
+    userId: string,
+    itemId: string,
+    quantity: number,
+    grantedAt: Date,
+  ): void {
     if (!this.userInventories.has(userId)) {
       this.userInventories.set(userId, new Map());
     }
-    
+
     const userInventory = this.userInventories.get(userId)!;
     const existingItem = userInventory.get(itemId);
-    
+
     if (existingItem) {
       existingItem.quantity += quantity;
       existingItem.grantedAt.push(grantedAt);
@@ -153,7 +220,11 @@ export class ItemService {
     }
   }
 
-  private removeFromUserInventory(userId: string, itemId: string, quantity: number): void {
+  private removeFromUserInventory(
+    userId: string,
+    itemId: string,
+    quantity: number,
+  ): void {
     const userInventory = this.userInventories.get(userId);
     if (!userInventory) return;
 

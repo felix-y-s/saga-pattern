@@ -10,18 +10,18 @@ import { NotificationService } from './services/notification.service';
 import { ItemPurchaseOrchestratorService } from './orchestrator/item-purchase-orchestrator.service';
 import { SagaRepositoryService } from './orchestrator/saga-repository.service';
 import { PurchaseCoordinatorService } from './choreography/purchase-coordinator.service';
-import { 
-  getSagaPatternConfig, 
-  setSagaPatternMode, 
-  SagaPatternMode, 
-  isOrchestrationMode, 
-  isChoreographyMode 
+import {
+  getSagaPatternConfig,
+  setSagaPatternMode,
+  SagaPatternMode,
+  isOrchestrationMode,
+  isChoreographyMode,
 } from './config/saga-pattern.config';
 
 @Controller()
 export class AppController {
   private readonly logger = new Logger(AppController.name);
-  
+
   constructor(
     private readonly appService: AppService,
     private readonly eventBus: EventBusService,
@@ -41,11 +41,19 @@ export class AppController {
   }
 
   @Post('test-eventbus')
-  async testEventBus(@Body() body: { userId: string; itemId: string; quantity: number; price: number }) {
+  async testEventBus(
+    @Body()
+    body: {
+      userId: string;
+      itemId: string;
+      quantity: number;
+      price: number;
+    },
+  ) {
     try {
       const transactionId = this.eventFactory.generateTransactionId();
       const eventId = this.eventFactory.generateEventId();
-      
+
       const event = new PurchaseInitiatedEvent(
         eventId,
         this.eventFactory.getCurrentTimestamp(),
@@ -57,10 +65,10 @@ export class AppController {
         body.price,
         transactionId,
       );
-      
+
       this.logger.log(`Publishing test event: ${event.eventType}`);
       await this.eventBus.publish(event);
-      
+
       return {
         success: true,
         eventId,
@@ -72,8 +80,8 @@ export class AppController {
           statusCheck: {
             url: `/saga/${transactionId}`,
             method: 'GET',
-            polling: 'Check status every 1-2 seconds until completion'
-          }
+            polling: 'Check status every 1-2 seconds until completion',
+          },
         },
         eventPublished: event.eventType,
       };
@@ -81,13 +89,21 @@ export class AppController {
       this.logger.error('Failed to publish test event:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
 
   @Post('test-services')
-  async testServices(@Body() body: { userId: string; itemId: string; quantity: number; price: number }) {
+  async testServices(
+    @Body()
+    body: {
+      userId: string;
+      itemId: string;
+      quantity: number;
+      price: number;
+    },
+  ) {
     const results = {
       user: null as any,
       item: null as any,
@@ -126,12 +142,13 @@ export class AppController {
       results.log = logResult;
 
       // Test Notification Service
-      const notificationResult = await this.notificationService.sendNotification({
-        userId: body.userId,
-        transactionId: 'test-txn',
-        type: 'purchase_success',
-        message: 'Test purchase completed successfully',
-      });
+      const notificationResult =
+        await this.notificationService.sendNotification({
+          userId: body.userId,
+          transactionId: 'test-txn',
+          type: 'purchase_success',
+          message: 'Test purchase completed successfully',
+        });
       results.notification = notificationResult;
 
       return {
@@ -142,42 +159,55 @@ export class AppController {
       this.logger.error('Failed to test services:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
         results,
       };
     }
   }
 
   @Post('purchase')
-  async purchase(@Body() body: { userId: string; itemId: string; quantity: number; price: number }) {
+  async purchase(
+    @Body()
+    body: {
+      userId: string;
+      itemId: string;
+      quantity: number;
+      price: number;
+    },
+  ) {
     try {
       this.logger.log(`Saga purchase request: ${JSON.stringify(body)}`);
-      
+
       const result = await this.orchestrator.executePurchase({
         userId: body.userId,
         itemId: body.itemId,
         quantity: body.quantity,
         price: body.price,
       });
-      
-      this.logger.log(`Purchase result: ${result.success ? 'SUCCESS' : 'FAILED'} - ${result.transactionId}`);
-      
+
+      this.logger.log(
+        `Purchase result: ${result.success ? 'SUCCESS' : 'FAILED'} - ${result.transactionId}`,
+      );
+
       return result;
     } catch (error) {
       this.logger.error('Purchase failed:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
 
   @Get('saga/:transactionId')
   async getSagaState(@Param('transactionId') transactionId: string) {
-    console.log(`🚀 | AppController | getSagaState | transactionId:`, transactionId);
+    console.log(
+      `🚀 | AppController | getSagaState | transactionId:`,
+      transactionId,
+    );
     try {
       const sagaState = await this.orchestrator.getSagaState(transactionId);
-      
+
       if (!sagaState) {
         return {
           found: false,
@@ -193,7 +223,7 @@ export class AppController {
       this.logger.error(`Failed to get saga state: ${transactionId}`, error);
       return {
         found: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -210,7 +240,7 @@ export class AppController {
       this.logger.error('Failed to get saga statistics:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -232,7 +262,7 @@ export class AppController {
       return {
         success: false,
         transactionId,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -240,64 +270,80 @@ export class AppController {
   // 🎭 새로운 코레오그래피 패턴 엔드포인트들
 
   @Post('purchase/choreography')
-  async purchaseWithChoreography(@Body() body: { userId: string; itemId: string; quantity: number; price: number }) {
+  async purchaseWithChoreography(
+    @Body()
+    body: {
+      userId: string;
+      itemId: string;
+      quantity: number;
+      price: number;
+    },
+  ) {
     try {
       // 현재 모드 확인
       if (!isChoreographyMode()) {
         return {
           success: false,
-          error: 'Choreography mode is not active. Current mode: ' + getSagaPatternConfig().mode,
+          error:
+            'Choreography mode is not active. Current mode: ' +
+            getSagaPatternConfig().mode,
           hint: 'Use POST /config/saga-mode to switch to choreography mode, or restart app with SAGA_PATTERN_MODE=choreography',
         };
       }
 
-      this.logger.log(`🎭 Choreography-based purchase request: ${JSON.stringify(body)}`);
-      
+      this.logger.log(
+        `🎭 Choreography-based purchase request: ${JSON.stringify(body)}`,
+      );
+
       const result = await this.purchaseCoordinator.initiatePurchase({
         userId: body.userId,
         itemId: body.itemId,
         quantity: body.quantity,
         price: body.price,
       });
-      
+
       this.logger.log(`🎭 Purchase initiated: ${result.transactionId}`);
-      
+
       return {
         success: true,
         transactionId: result.transactionId,
         status: result.status,
-        message: 'Purchase initiated via Choreography pattern (processing asynchronously)',
+        message:
+          'Purchase initiated via Choreography pattern (processing asynchronously)',
         processingInfo: {
           type: 'choreography',
           description: 'Independent event handlers will process each step',
           statusCheck: {
             url: `/choreography/transaction/${result.transactionId}`,
             method: 'GET',
-            polling: 'Check status every 1-2 seconds until completion'
+            polling: 'Check status every 1-2 seconds until completion',
           },
           eventChain: [
             'PurchaseInitiated → UserValidationHandler',
-            'UserValidated → ItemGrantHandler', 
+            'UserValidated → ItemGrantHandler',
             'ItemGranted → LogRecordHandler',
             'LogRecorded → NotificationHandler',
-            'Failures → CompensationHandler'
-          ]
+            'Failures → CompensationHandler',
+          ],
         },
       };
     } catch (error) {
       this.logger.error('🎭 Choreography purchase failed:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
 
   @Get('choreography/transaction/:transactionId')
-  async getChoreographyTransactionStatus(@Param('transactionId') transactionId: string) {
+  async getChoreographyTransactionStatus(
+    @Param('transactionId') transactionId: string,
+  ) {
     try {
-      const sagaState = await this.purchaseCoordinator.getTransactionStatus(transactionId);
-      
+      const sagaState =
+        await this.purchaseCoordinator.getTransactionStatus(transactionId);
+
       if (!sagaState) {
         return {
           found: false,
@@ -310,7 +356,7 @@ export class AppController {
         transaction: sagaState,
         patternUsed: 'choreography',
         eventHandlers: {
-          completed: sagaState.steps.map(step => ({
+          completed: sagaState.steps.map((step) => ({
             step: step.step,
             status: step.status,
             executedAt: step.executedAt,
@@ -320,10 +366,13 @@ export class AppController {
         },
       };
     } catch (error) {
-      this.logger.error(`🎭 Failed to get choreography transaction status: ${transactionId}`, error);
+      this.logger.error(
+        `🎭 Failed to get choreography transaction status: ${transactionId}`,
+        error,
+      );
       return {
         found: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -331,13 +380,14 @@ export class AppController {
   @Get('choreography/user/:userId/history')
   async getUserChoreographyHistory(@Param('userId') userId: string) {
     try {
-      const history = await this.purchaseCoordinator.getUserPurchaseHistory(userId);
-      
+      const history =
+        await this.purchaseCoordinator.getUserPurchaseHistory(userId);
+
       return {
         success: true,
         userId,
         transactionCount: history.length,
-        transactions: history.map(saga => ({
+        transactions: history.map((saga) => ({
           transactionId: saga.transactionId,
           status: saga.status,
           purchaseData: saga.purchaseData,
@@ -350,10 +400,13 @@ export class AppController {
         patternUsed: 'choreography',
       };
     } catch (error) {
-      this.logger.error(`🎭 Failed to get choreography user history: ${userId}`, error);
+      this.logger.error(
+        `🎭 Failed to get choreography user history: ${userId}`,
+        error,
+      );
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -362,7 +415,7 @@ export class AppController {
   async getChoreographyStats() {
     try {
       const stats = await this.purchaseCoordinator.getSystemStatistics();
-      
+
       return {
         success: true,
         patternUsed: 'choreography',
@@ -371,10 +424,10 @@ export class AppController {
           pattern: 'Event-driven choreography',
           characteristics: [
             'Decentralized control',
-            'Event-based communication', 
+            'Event-based communication',
             'Independent handler services',
             'Loose coupling between components',
-            'Self-contained compensation logic'
+            'Self-contained compensation logic',
           ],
         },
       };
@@ -382,7 +435,7 @@ export class AppController {
       this.logger.error('🎭 Failed to get choreography statistics:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -391,7 +444,7 @@ export class AppController {
   async clearChoreographyTransactions() {
     try {
       await this.purchaseCoordinator.clearAllTransactions();
-      
+
       return {
         success: true,
         message: 'All choreography transactions cleared',
@@ -401,21 +454,21 @@ export class AppController {
       this.logger.error('🎭 Failed to clear choreography transactions:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
 
   // 🔍 패턴 비교 엔드포인트
   @Get('patterns/comparison')
-  async getPatternsComparison() {
+  getPatternsComparison() {
     const currentConfig = getSagaPatternConfig();
-    
+
     return {
       currentMode: currentConfig.mode,
       currentModeActive: {
         orchestration: isOrchestrationMode(),
-        choreography: isChoreographyMode()
+        choreography: isChoreographyMode(),
       },
       patterns: {
         orchestration: {
@@ -425,39 +478,55 @@ export class AppController {
             'Central orchestrator manages all steps',
             'Direct service dependencies',
             'Sequential execution with error handling',
-            'Tight coupling between orchestrator and services'
+            'Tight coupling between orchestrator and services',
           ],
-          advantages: ['Easy to understand', 'Clear control flow', 'Simple debugging'],
-          disadvantages: ['Single point of failure', 'Tight coupling', 'Hard to extend'],
-          active: isOrchestrationMode()
+          advantages: [
+            'Easy to understand',
+            'Clear control flow',
+            'Simple debugging',
+          ],
+          disadvantages: [
+            'Single point of failure',
+            'Tight coupling',
+            'Hard to extend',
+          ],
+          active: isOrchestrationMode(),
         },
         choreography: {
-          endpoint: '/purchase/choreography', 
+          endpoint: '/purchase/choreography',
           description: 'Event-driven decentralized processing',
           characteristics: [
             'Independent event handlers per domain',
             'Event-based communication only',
             'Asynchronous processing chain',
-            'Loose coupling between components'
+            'Loose coupling between components',
           ],
-          advantages: ['Loose coupling', 'High scalability', 'Independent deployment'],
-          disadvantages: ['Complex debugging', 'Eventual consistency', 'Event ordering complexity'],
-          active: isChoreographyMode()
-        }
+          advantages: [
+            'Loose coupling',
+            'High scalability',
+            'Independent deployment',
+          ],
+          disadvantages: [
+            'Complex debugging',
+            'Eventual consistency',
+            'Event ordering complexity',
+          ],
+          active: isChoreographyMode(),
+        },
       },
       statusEndpoints: {
         orchestration: '/saga/{transactionId}',
-        choreography: '/choreography/transaction/{transactionId}'
+        choreography: '/choreography/transaction/{transactionId}',
       },
       statisticsEndpoints: {
         orchestration: '/sagas/stats',
-        choreography: '/choreography/stats'
+        choreography: '/choreography/stats',
       },
       configEndpoints: {
         getCurrentConfig: 'GET /config/saga-mode',
         switchMode: 'POST /config/saga-mode',
-        note: 'Mode switching requires application restart to take full effect'
-      }
+        note: 'Mode switching requires application restart to take full effect',
+      },
     };
   }
 
@@ -466,23 +535,24 @@ export class AppController {
   @Get('config/saga-mode')
   getSagaPatternConfig() {
     const config = getSagaPatternConfig();
-    
+
     return {
       success: true,
       config,
       activeHandlers: {
         orchestration: isOrchestrationMode(),
-        choreography: isChoreographyMode()
+        choreography: isChoreographyMode(),
       },
-      warning: 'Handler registration happens at module initialization. Mode changes may require restart.'
+      warning:
+        'Handler registration happens at module initialization. Mode changes may require restart.',
     };
   }
 
   @Post('config/saga-mode')
-  async setSagaPatternMode(@Body() body: { mode: string }) {
+  setSagaPatternMode(@Body() body: { mode: string }) {
     try {
       const { mode } = body;
-      
+
       if (!Object.values(SagaPatternMode).includes(mode as SagaPatternMode)) {
         return {
           success: false,
@@ -495,24 +565,27 @@ export class AppController {
       setSagaPatternMode(mode as SagaPatternMode);
       const newConfig = getSagaPatternConfig();
 
-      this.logger.log(`🔧 Saga pattern mode changed: ${oldConfig.mode} → ${newConfig.mode}`);
+      this.logger.log(
+        `🔧 Saga pattern mode changed: ${oldConfig.mode} → ${newConfig.mode}`,
+      );
 
       return {
         success: true,
         previousMode: oldConfig.mode,
         newMode: newConfig.mode,
-        warning: 'Event handlers were registered at startup. Full mode change requires application restart.',
+        warning:
+          'Event handlers were registered at startup. Full mode change requires application restart.',
         recommendation: `Restart the application with SAGA_PATTERN_MODE=${mode} environment variable for complete activation.`,
         currentlyActive: {
           orchestration: isOrchestrationMode(),
-          choreography: isChoreographyMode()
-        }
+          choreography: isChoreographyMode(),
+        },
       };
     } catch (error) {
       this.logger.error('Failed to change saga pattern mode:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }

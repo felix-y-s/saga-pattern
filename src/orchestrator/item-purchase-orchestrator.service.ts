@@ -7,8 +7,16 @@ import { LogService } from '../services/log.service';
 import { NotificationService } from '../services/notification.service';
 import { SagaRepositoryService } from './saga-repository.service';
 import { SagaContextImpl } from './saga-context';
-import { IOrchestratorService, PurchaseResult } from './interfaces/orchestrator.interface';
-import { SagaState, SagaStatus, SagaStep, SagaStepResult } from './interfaces/saga-state.interface';
+import {
+  IOrchestratorService,
+  PurchaseResult,
+} from './interfaces/orchestrator.interface';
+import {
+  SagaState,
+  SagaStatus,
+  SagaStep,
+  SagaStepResult,
+} from './interfaces/saga-state.interface';
 import { PurchaseRequestDto } from '../dtos/purchase-request.dto';
 import {
   PurchaseInitiatedEvent,
@@ -45,14 +53,22 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     return this.executePurchaseWithTransactionId(request, transactionId);
   }
 
-  async executePurchaseFromEvent(request: PurchaseRequestDto, transactionId: string): Promise<PurchaseResult> {
-    this.logger.log(`Starting event-driven purchase orchestration: ${transactionId}`);
+  async executePurchaseFromEvent(
+    request: PurchaseRequestDto,
+    transactionId: string,
+  ): Promise<PurchaseResult> {
+    this.logger.log(
+      `Starting event-driven purchase orchestration: ${transactionId}`,
+    );
     return this.executePurchaseWithTransactionId(request, transactionId);
   }
 
-  private async executePurchaseWithTransactionId(request: PurchaseRequestDto, transactionId: string): Promise<PurchaseResult> {
+  private async executePurchaseWithTransactionId(
+    request: PurchaseRequestDto,
+    transactionId: string,
+  ): Promise<PurchaseResult> {
     this.logger.log(`Starting purchase orchestration: ${transactionId}`);
-    
+
     // 초기 Saga 상태 생성
     const sagaState: SagaState = {
       transactionId,
@@ -77,7 +93,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     try {
       // Saga 실행
       context.updateState({ status: SagaStatus.IN_PROGRESS });
-      await this.sagaRepository.update(transactionId, { status: SagaStatus.IN_PROGRESS });
+      await this.sagaRepository.update(transactionId, {
+        status: SagaStatus.IN_PROGRESS,
+      });
 
       // Step 1: 사용자 검증
       await this.executeUserValidation(context);
@@ -101,23 +119,27 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
       // Step 4: 알림 발송 (실패해도 전체 트랜잭션은 성공)
       await this.executeNotification(context);
-      
+
       // 모든 단계 완료
       context.markCompleted();
       await this.sagaRepository.update(transactionId, context.state);
-      
-      await this.publishPurchaseCompletedEvent(context);
-      
-      this.logger.log(`Purchase orchestration completed successfully: ${transactionId}`);
-      
-      return this.buildSuccessResult(context);
 
+      await this.publishPurchaseCompletedEvent(context);
+
+      this.logger.log(
+        `Purchase orchestration completed successfully: ${transactionId}`,
+      );
+
+      return this.buildSuccessResult(context);
     } catch (error) {
-      this.logger.error(`Purchase orchestration failed: ${transactionId}`, error);
-      
+      this.logger.error(
+        `Purchase orchestration failed: ${transactionId}`,
+        error,
+      );
+
       context.markFailed(SagaStep.USER_VALIDATION, error);
       await this.sagaRepository.update(transactionId, context.state);
-      
+
       await this.compensateSaga(transactionId);
       return this.handleSagaFailure(context);
     }
@@ -125,10 +147,12 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
   private async executeUserValidation(context: SagaContextImpl): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      this.logger.debug(`Executing user validation: ${context.state.transactionId}`);
-      
+      this.logger.debug(
+        `Executing user validation: ${context.state.transactionId}`,
+      );
+
       const result = await this.userService.validateUser({
         userId: context.state.purchaseData.userId,
         transactionId: context.state.transactionId,
@@ -156,8 +180,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
       }
 
       context.addStepResult(stepResult);
-      await this.sagaRepository.update(context.state.transactionId, context.state);
-
+      await this.sagaRepository.update(
+        context.state.transactionId,
+        context.state,
+      );
     } catch (error) {
       const stepResult: SagaStepResult = {
         step: SagaStep.USER_VALIDATION,
@@ -178,10 +204,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
   private async executeItemGrant(context: SagaContextImpl): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       this.logger.debug(`Executing item grant: ${context.state.transactionId}`);
-      
+
       const result = await this.itemService.grantItem({
         userId: context.state.purchaseData.userId,
         itemId: context.state.purchaseData.itemId,
@@ -210,8 +236,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
       }
 
       context.addStepResult(stepResult);
-      await this.sagaRepository.update(context.state.transactionId, context.state);
-
+      await this.sagaRepository.update(
+        context.state.transactionId,
+        context.state,
+      );
     } catch (error) {
       const stepResult: SagaStepResult = {
         step: SagaStep.ITEM_GRANT,
@@ -232,10 +260,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
   private async executeLogRecord(context: SagaContextImpl): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       this.logger.debug(`Executing log record: ${context.state.transactionId}`);
-      
+
       const result = await this.logService.recordLog({
         transactionId: context.state.transactionId,
         userId: context.state.purchaseData.userId,
@@ -271,8 +299,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
       }
 
       context.addStepResult(stepResult);
-      await this.sagaRepository.update(context.state.transactionId, context.state);
-
+      await this.sagaRepository.update(
+        context.state.transactionId,
+        context.state,
+      );
     } catch (error) {
       const stepResult: SagaStepResult = {
         step: SagaStep.LOG_RECORD,
@@ -293,10 +323,12 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
   private async executeNotification(context: SagaContextImpl): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      this.logger.debug(`Executing notification: ${context.state.transactionId}`);
-      
+      this.logger.debug(
+        `Executing notification: ${context.state.transactionId}`,
+      );
+
       const result = await this.notificationService.sendNotification({
         userId: context.state.purchaseData.userId,
         transactionId: context.state.transactionId,
@@ -325,19 +357,26 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
         };
 
         await this.publishNotificationFailedEvent(context, result);
-        
+
         // 알림 실패는 전체 트랜잭션을 실패시키지 않음
-        this.logger.warn(`Notification failed but transaction continues: ${context.state.transactionId}`);
+        this.logger.warn(
+          `Notification failed but transaction continues: ${context.state.transactionId}`,
+        );
       } else {
         await this.publishNotificationSentEvent(context, result);
       }
 
       context.addStepResult(stepResult);
-      await this.sagaRepository.update(context.state.transactionId, context.state);
-
+      await this.sagaRepository.update(
+        context.state.transactionId,
+        context.state,
+      );
     } catch (error) {
-      this.logger.warn(`Notification error (non-critical): ${context.state.transactionId}`, error);
-      
+      this.logger.warn(
+        `Notification error (non-critical): ${context.state.transactionId}`,
+        error,
+      );
+
       const stepResult: SagaStepResult = {
         step: SagaStep.NOTIFICATION,
         status: 'failed',
@@ -400,8 +439,13 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     }
   }
 
-  private async executeCompensation(context: SagaContextImpl, step: SagaStep): Promise<void> {
-    this.logger.debug(`Executing compensation for step ${step}: ${context.state.transactionId}`);
+  private async executeCompensation(
+    context: SagaContextImpl,
+    step: SagaStep,
+  ): Promise<void> {
+    this.logger.debug(
+      `Executing compensation for step ${step}: ${context.state.transactionId}`,
+    );
 
     try {
       let success = false;
@@ -426,12 +470,18 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
         case SagaStep.LOG_RECORD:
           // 로그는 보상하지 않고 상태만 업데이트
-          const logId = context.state.steps.find(s => s.step === SagaStep.LOG_RECORD)?.data?.logId;
+          const logId = context.state.steps.find(
+            (s) => s.step === SagaStep.LOG_RECORD,
+          )?.data?.logId;
           if (logId) {
-            success = await this.logService.updateLogStatus(logId, 'compensated', {
-              compensatedAt: new Date(),
-              reason: 'Transaction compensated',
-            });
+            success = await this.logService.updateLogStatus(
+              logId,
+              'compensated',
+              {
+                compensatedAt: new Date(),
+                reason: 'Transaction compensated',
+              },
+            );
           }
           break;
 
@@ -456,10 +506,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
       if (!success) {
         throw new Error(`Compensation failed for step: ${step}`);
       }
-
     } catch (error) {
       this.logger.error(`Compensation error for step ${step}:`, error);
-      
+
       context.addCompensation({
         step,
         action: 'compensate',
@@ -476,26 +525,36 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     return await this.sagaRepository.findById(transactionId);
   }
 
-  private async handleSagaFailure(context: SagaContextImpl): Promise<PurchaseResult> {
+  private async handleSagaFailure(
+    context: SagaContextImpl,
+  ): Promise<PurchaseResult> {
     await this.publishPurchaseFailedEvent(context);
-    
+
     return {
       success: false,
       transactionId: context.state.transactionId,
       status: context.state.status,
       completedSteps: context.getExecutedSteps(),
-      error: context.state.error ? {
-        step: context.state.error.step,
-        code: context.state.error.code,
-        message: context.state.error.message,
-      } : undefined,
+      error: context.state.error
+        ? {
+            step: context.state.error.step,
+            code: context.state.error.code,
+            message: context.state.error.message,
+          }
+        : undefined,
     };
   }
 
   private buildSuccessResult(context: SagaContextImpl): PurchaseResult {
-    const logStep = context.state.steps.find(s => s.step === SagaStep.LOG_RECORD);
-    const notificationStep = context.state.steps.find(s => s.step === SagaStep.NOTIFICATION);
-    const itemStep = context.state.steps.find(s => s.step === SagaStep.ITEM_GRANT);
+    const logStep = context.state.steps.find(
+      (s) => s.step === SagaStep.LOG_RECORD,
+    );
+    const notificationStep = context.state.steps.find(
+      (s) => s.step === SagaStep.NOTIFICATION,
+    );
+    const itemStep = context.state.steps.find(
+      (s) => s.step === SagaStep.ITEM_GRANT,
+    );
 
     return {
       success: true,
@@ -515,7 +574,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
   }
 
   // 이벤트 발행 메소드들
-  private async publishPurchaseInitiatedEvent(context: SagaContextImpl): Promise<void> {
+  private async publishPurchaseInitiatedEvent(
+    context: SagaContextImpl,
+  ): Promise<void> {
     const event = new PurchaseInitiatedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -531,7 +592,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishUserValidatedEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishUserValidatedEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new UserValidatedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -545,7 +609,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishUserValidationFailedEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishUserValidationFailedEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new UserValidationFailedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -560,7 +627,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishItemGrantedEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishItemGrantedEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new ItemGrantedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -575,7 +645,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishItemGrantFailedEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishItemGrantFailedEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new ItemGrantFailedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -591,7 +664,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishLogRecordedEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishLogRecordedEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new LogRecordedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -610,7 +686,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishLogFailedEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishLogFailedEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new LogFailedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -628,7 +707,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishNotificationSentEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishNotificationSentEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new NotificationSentEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -643,7 +725,10 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishNotificationFailedEvent(context: SagaContextImpl, result: any): Promise<void> {
+  private async publishNotificationFailedEvent(
+    context: SagaContextImpl,
+    result: any,
+  ): Promise<void> {
     const event = new NotificationFailedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -659,7 +744,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishPurchaseCompletedEvent(context: SagaContextImpl): Promise<void> {
+  private async publishPurchaseCompletedEvent(
+    context: SagaContextImpl,
+  ): Promise<void> {
     const event = new PurchaseCompletedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -676,7 +763,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishPurchaseFailedEvent(context: SagaContextImpl): Promise<void> {
+  private async publishPurchaseFailedEvent(
+    context: SagaContextImpl,
+  ): Promise<void> {
     const event = new PurchaseFailedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -693,7 +782,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishCompensationInitiatedEvent(context: SagaContextImpl): Promise<void> {
+  private async publishCompensationInitiatedEvent(
+    context: SagaContextImpl,
+  ): Promise<void> {
     const event = new CompensationInitiatedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -707,7 +798,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
     await this.eventBus.publish(event);
   }
 
-  private async publishCompensationCompletedEvent(context: SagaContextImpl): Promise<void> {
+  private async publishCompensationCompletedEvent(
+    context: SagaContextImpl,
+  ): Promise<void> {
     const event = new CompensationCompletedEvent(
       this.eventFactory.generateEventId(),
       this.eventFactory.getCurrentTimestamp(),
@@ -716,7 +809,7 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
       context.state.transactionId,
       'purchase_compensation',
       {
-        compensatedSteps: context.state.compensations.map(c => c.step),
+        compensatedSteps: context.state.compensations.map((c) => c.step),
         completedAt: new Date(),
       },
     );

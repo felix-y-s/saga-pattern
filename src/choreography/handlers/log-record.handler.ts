@@ -4,7 +4,10 @@ import { EventBusService } from '../../events/event-bus.service';
 import { EventFactory } from '../../events/event-factory';
 import { LogService } from '../../services/log.service';
 import { SagaRepositoryService } from '../../orchestrator/saga-repository.service';
-import { SagaStep, SagaStepResult } from '../../orchestrator/interfaces/saga-state.interface';
+import {
+  SagaStep,
+  SagaStepResult,
+} from '../../orchestrator/interfaces/saga-state.interface';
 import {
   ItemGrantedEvent,
   LogRecordedEvent,
@@ -29,7 +32,7 @@ export class LogRecordHandler implements EventHandler<ItemGrantedEvent> {
   async handle(event: ItemGrantedEvent): Promise<void> {
     const startTime = Date.now();
     const { transactionId, userId, itemId, quantity } = event;
-    
+
     this.logger.log(`📝 Starting log record for transaction: ${transactionId}`);
 
     try {
@@ -40,7 +43,7 @@ export class LogRecordHandler implements EventHandler<ItemGrantedEvent> {
       }
 
       const { price } = sagaState.purchaseData;
-      const executedSteps = sagaState.steps.map(step => step.step);
+      const executedSteps = sagaState.steps.map((step) => step.step);
       const totalDuration = Date.now() - sagaState.startedAt.getTime();
 
       // 로그 기록 수행
@@ -62,7 +65,7 @@ export class LogRecordHandler implements EventHandler<ItemGrantedEvent> {
       // Saga 상태 업데이트
       const stepResult: SagaStepResult = {
         step: SagaStep.LOG_RECORD,
-        status: logResult.success ? 'success' as const : 'failed' as const,
+        status: logResult.success ? ('success' as const) : ('failed' as const),
         data: logResult,
         executedAt: new Date(),
         duration: Date.now() - startTime,
@@ -80,8 +83,10 @@ export class LogRecordHandler implements EventHandler<ItemGrantedEvent> {
 
       // 다음 단계를 위한 이벤트 발행
       if (logResult.success) {
-        this.logger.log(`✅ Log record successful: ${logResult.logId} (${transactionId})`);
-        
+        this.logger.log(
+          `✅ Log record successful: ${logResult.logId} (${transactionId})`,
+        );
+
         const nextEvent = new LogRecordedEvent(
           this.eventFactory.generateEventId(),
           this.eventFactory.getCurrentTimestamp(),
@@ -100,8 +105,10 @@ export class LogRecordHandler implements EventHandler<ItemGrantedEvent> {
 
         await this.eventBus.publish(nextEvent);
       } else {
-        this.logger.warn(`❌ Log record failed: ${transactionId} - ${logResult.reason}`);
-        
+        this.logger.warn(
+          `❌ Log record failed: ${transactionId} - ${logResult.reason}`,
+        );
+
         const failureEvent = new LogFailedEvent(
           this.eventFactory.generateEventId(),
           this.eventFactory.getCurrentTimestamp(),
@@ -120,7 +127,6 @@ export class LogRecordHandler implements EventHandler<ItemGrantedEvent> {
 
         await this.eventBus.publish(failureEvent);
       }
-
     } catch (error) {
       this.logger.error(`💥 Log record error: ${transactionId}`, error);
 
@@ -137,7 +143,10 @@ export class LogRecordHandler implements EventHandler<ItemGrantedEvent> {
         duration: Date.now() - startTime,
       };
 
-      await this.sagaRepository.updateStepResult(transactionId, errorStepResult);
+      await this.sagaRepository.updateStepResult(
+        transactionId,
+        errorStepResult,
+      );
 
       // 실패 이벤트 발행
       const sagaState = await this.sagaRepository.findById(transactionId);

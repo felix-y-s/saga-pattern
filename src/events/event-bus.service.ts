@@ -16,7 +16,7 @@ export class EventBusService implements IEventBus {
     });
 
     const handlers = this.eventHandlers.get(event.eventType) || new Set();
-    
+
     if (handlers.size === 0) {
       this.logger.warn(`No handlers found for event type: ${event.eventType}`);
       return;
@@ -25,7 +25,9 @@ export class EventBusService implements IEventBus {
     const publishPromises = Array.from(handlers).map(async (handler) => {
       try {
         await handler.handle(event);
-        this.logger.debug(`Event ${event.eventType} handled successfully by ${handler.constructor.name}`);
+        this.logger.debug(
+          `Event ${event.eventType} handled successfully by ${handler.constructor.name}`,
+        );
       } catch (error) {
         this.logger.error(
           `Error handling event ${event.eventType} with ${handler.constructor.name}:`,
@@ -38,7 +40,10 @@ export class EventBusService implements IEventBus {
     await Promise.all(publishPromises);
   }
 
-  subscribe<T extends BaseEvent>(eventType: string, handler: EventHandler<T>): void {
+  subscribe<T extends BaseEvent>(
+    eventType: string,
+    handler: EventHandler<T>,
+  ): void {
     if (!this.eventHandlers.has(eventType)) {
       this.eventHandlers.set(eventType, new Set());
     }
@@ -51,8 +56,10 @@ export class EventBusService implements IEventBus {
     const handlers = this.eventHandlers.get(eventType);
     if (handlers) {
       handlers.delete(handler);
-      this.logger.debug(`Unsubscribed ${handler.constructor.name} from ${eventType}`);
-      
+      this.logger.debug(
+        `Unsubscribed ${handler.constructor.name} from ${eventType}`,
+      );
+
       if (handlers.size === 0) {
         this.eventHandlers.delete(eventType);
       }

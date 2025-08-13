@@ -82,7 +82,11 @@ describe('UserService', () => {
         requiredBalance: 100,
       });
 
-      const result = await service.compensateUserValidation('user-123', 100, 'txn-5');
+      const result = await service.compensateUserValidation(
+        'user-123',
+        100,
+        'txn-5',
+      );
       expect(result).toBe(true);
 
       const profile = await service.getUserProfile('user-123');
@@ -90,7 +94,11 @@ describe('UserService', () => {
     });
 
     it('should fail to compensate for non-existent user', async () => {
-      const result = await service.compensateUserValidation('non-existent', 100, 'txn-6');
+      const result = await service.compensateUserValidation(
+        'non-existent',
+        100,
+        'txn-6',
+      );
       expect(result).toBe(false);
     });
   });

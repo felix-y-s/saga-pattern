@@ -1,11 +1,14 @@
 # Saga Pattern 기반 아이템 구매 시스템
 
-NestJS를 사용하여 구현한 **Orchestration & Choreography Saga Pattern** 기반의 분산 트랜잭션 시스템입니다.
+NestJS를 사용하여 구현한 **Orchestration & Choreography(코레오그래피) Saga Pattern** 기반의 분산 트랜잭션 시스템입니다.
+- Orchestration: 중앙 집중식
+- Choreography: 분산 이벤트
 
 ## 📖 목차
 
-- [시스템 개요](#시스템-개요)
-- [아키텍처](#아키텍처)
+- [시스템 개요](#-시스템-개요)
+- [아키텍처](#️-아키텍처)
+- [이벤트 플로우](#-이벤트-플로우)
 - [핵심 컴포넌트](#핵심-컴포넌트)
 - [설치 및 실행](#설치-및-실행)
 - [API 가이드](#api-가이드)
@@ -61,7 +64,7 @@ NestJS를 사용하여 구현한 **Orchestration & Choreography Saga Pattern** �
     ┌─────────────────────▼─────────────────────────────────────┐
     │                 Domain Services                           │
     ├─────────────┬──────────────┬────────────┬─────────────────┤
-    │ UserService │ ItemService  │ LogService │ NotifService    │
+    │ UserService │ ItemService  │ LogService │ NotificationService    │
     │ (사용자검증)   │ (아이템지급)    │ (로그기록)   │   (알림발송)      │
     └─────────────┴──────────────┴────────────┴─────────────────┘
                           │

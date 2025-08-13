@@ -32,7 +32,9 @@ describe('ItemPurchaseOrchestratorService', () => {
       ],
     }).compile();
 
-    orchestrator = module.get<ItemPurchaseOrchestratorService>(ItemPurchaseOrchestratorService);
+    orchestrator = module.get<ItemPurchaseOrchestratorService>(
+      ItemPurchaseOrchestratorService,
+    );
     userService = module.get<UserService>(UserService);
     itemService = module.get<ItemService>(ItemService);
     logService = module.get<LogService>(LogService);
@@ -141,7 +143,9 @@ describe('ItemPurchaseOrchestratorService', () => {
       expect(sagaState?.status).toBe(SagaStatus.COMPLETED);
 
       // But notification step should show failure
-      const notificationStep = sagaState?.steps.find(s => s.step === 'notification');
+      const notificationStep = sagaState?.steps.find(
+        (s) => s.step === 'notification',
+      );
       expect(notificationStep?.status).toBe('failed');
     });
   });
@@ -180,7 +184,9 @@ describe('ItemPurchaseOrchestratorService', () => {
       expect(result.success).toBe(false);
 
       // Manual compensation
-      const compensationResult = await orchestrator.compensateSaga(result.transactionId);
+      const compensationResult = await orchestrator.compensateSaga(
+        result.transactionId,
+      );
       expect(compensationResult).toBe(true);
 
       const sagaState = await orchestrator.getSagaState(result.transactionId);

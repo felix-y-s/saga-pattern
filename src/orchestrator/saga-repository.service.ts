@@ -1,17 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SagaState, SagaStepResult, SagaStatus } from './interfaces/saga-state.interface';
+import {
+  SagaState,
+  SagaStepResult,
+  SagaStatus,
+} from './interfaces/saga-state.interface';
 import { SagaRepository } from './interfaces/orchestrator.interface';
 
 @Injectable()
 export class SagaRepositoryService implements SagaRepository {
   private readonly logger = new Logger(SagaRepositoryService.name);
-  
+
   // 메모리 기반 저장소 (실제 환경에서는 데이터베이스 사용)
   private readonly sagas = new Map<string, SagaState>();
 
   async save(saga: SagaState): Promise<void> {
     this.sagas.set(saga.transactionId, { ...saga });
-    this.logger.debug(`Saga saved: ${saga.transactionId}, status: ${saga.status}`);
+    this.logger.debug(
+      `Saga saved: ${saga.transactionId}, status: ${saga.status}`,
+    );
   }
 
   async findById(transactionId: string): Promise<SagaState | null> {
@@ -19,7 +25,10 @@ export class SagaRepositoryService implements SagaRepository {
     return saga ? { ...saga } : null;
   }
 
-  async update(transactionId: string, updates: Partial<SagaState>): Promise<void> {
+  async update(
+    transactionId: string,
+    updates: Partial<SagaState>,
+  ): Promise<void> {
     const existingSaga = this.sagas.get(transactionId);
     if (!existingSaga) {
       throw new Error(`Saga not found: ${transactionId}`);
@@ -27,7 +36,9 @@ export class SagaRepositoryService implements SagaRepository {
 
     const updatedSaga = { ...existingSaga, ...updates };
     this.sagas.set(transactionId, updatedSaga);
-    this.logger.debug(`Saga updated: ${transactionId}, status: ${updatedSaga.status}`);
+    this.logger.debug(
+      `Saga updated: ${transactionId}, status: ${updatedSaga.status}`,
+    );
   }
 
   async delete(transactionId: string): Promise<void> {
@@ -38,24 +49,26 @@ export class SagaRepositoryService implements SagaRepository {
   }
 
   async findAll(): Promise<SagaState[]> {
-    return Array.from(this.sagas.values()).map(saga => ({ ...saga }));
+    return Array.from(this.sagas.values()).map((saga) => ({ ...saga }));
   }
 
   // 편의 메소드들
   async countByStatus(status: string): Promise<number> {
-    return Array.from(this.sagas.values()).filter(saga => saga.status === status).length;
+    return Array.from(this.sagas.values()).filter(
+      (saga) => saga.status === status,
+    ).length;
   }
 
   async findByStatus(status: string): Promise<SagaState[]> {
     return Array.from(this.sagas.values())
-      .filter(saga => saga.status === status)
-      .map(saga => ({ ...saga }));
+      .filter((saga) => saga.status === status)
+      .map((saga) => ({ ...saga }));
   }
 
   async findByUserId(userId: string): Promise<SagaState[]> {
     return Array.from(this.sagas.values())
-      .filter(saga => saga.purchaseData.userId === userId)
-      .map(saga => ({ ...saga }))
+      .filter((saga) => saga.purchaseData.userId === userId)
+      .map((saga) => ({ ...saga }))
       .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
   }
 
@@ -74,31 +87,36 @@ export class SagaRepositoryService implements SagaRepository {
     compensated: number;
   }> {
     const sagas = Array.from(this.sagas.values());
-    
+
     return {
       total: sagas.length,
-      pending: sagas.filter(s => s.status === 'pending').length,
-      inProgress: sagas.filter(s => s.status === 'in_progress').length,
-      completed: sagas.filter(s => s.status === 'completed').length,
-      failed: sagas.filter(s => s.status === 'failed').length,
-      compensating: sagas.filter(s => s.status === 'compensating').length,
-      compensated: sagas.filter(s => s.status === 'compensated').length,
+      pending: sagas.filter((s) => s.status === 'pending').length,
+      inProgress: sagas.filter((s) => s.status === 'in_progress').length,
+      completed: sagas.filter((s) => s.status === 'completed').length,
+      failed: sagas.filter((s) => s.status === 'failed').length,
+      compensating: sagas.filter((s) => s.status === 'compensating').length,
+      compensated: sagas.filter((s) => s.status === 'compensated').length,
     };
   }
 
   // 코레오그래피 패턴을 위한 추가 메서드들
-  
+
   /**
    * 특정 단계의 결과를 업데이트
    */
-  async updateStepResult(transactionId: string, stepResult: SagaStepResult): Promise<void> {
+  async updateStepResult(
+    transactionId: string,
+    stepResult: SagaStepResult,
+  ): Promise<void> {
     const existingSaga = this.sagas.get(transactionId);
     if (!existingSaga) {
       throw new Error(`Saga not found: ${transactionId}`);
     }
 
     // 기존 동일 단계 결과가 있다면 교체, 없다면 추가
-    const existingStepIndex = existingSaga.steps.findIndex(step => step.step === stepResult.step);
+    const existingStepIndex = existingSaga.steps.findIndex(
+      (step) => step.step === stepResult.step,
+    );
     if (existingStepIndex >= 0) {
       existingSaga.steps[existingStepIndex] = stepResult;
     } else {
@@ -113,20 +131,26 @@ export class SagaRepositoryService implements SagaRepository {
     }
 
     this.sagas.set(transactionId, existingSaga);
-    this.logger.debug(`Step result updated: ${transactionId}, step: ${stepResult.step}, status: ${stepResult.status}`);
+    this.logger.debug(
+      `Step result updated: ${transactionId}, step: ${stepResult.step}, status: ${stepResult.status}`,
+    );
   }
 
   /**
    * Saga 상태만 업데이트 (완료 시간 포함)
    */
-  async updateSagaStatus(transactionId: string, status: SagaStatus, completedAt?: Date): Promise<void> {
+  async updateSagaStatus(
+    transactionId: string,
+    status: SagaStatus,
+    completedAt?: Date,
+  ): Promise<void> {
     const existingSaga = this.sagas.get(transactionId);
     if (!existingSaga) {
       throw new Error(`Saga not found: ${transactionId}`);
     }
 
     existingSaga.status = status;
-    
+
     if (status === SagaStatus.COMPLETED && completedAt) {
       existingSaga.completedAt = completedAt;
     } else if (status === SagaStatus.FAILED && completedAt) {
@@ -134,6 +158,8 @@ export class SagaRepositoryService implements SagaRepository {
     }
 
     this.sagas.set(transactionId, existingSaga);
-    this.logger.debug(`Saga status updated: ${transactionId}, status: ${status}`);
+    this.logger.debug(
+      `Saga status updated: ${transactionId}, status: ${status}`,
+    );
   }
 }

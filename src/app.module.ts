@@ -8,10 +8,10 @@ import { ChoreographyModule } from './choreography/choreography.module';
 
 @Module({
   imports: [
-    EventBusModule, 
-    ServicesModule, 
+    EventBusModule,
+    ServicesModule,
     OrchestratorModule,
-    ChoreographyModule,  // 새로운 코레오그래피 모듈 추가
+    ChoreographyModule, // 새로운 코레오그래피 모듈 추가
   ],
   controllers: [AppController],
   providers: [AppService],

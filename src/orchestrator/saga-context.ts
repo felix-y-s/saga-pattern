@@ -1,4 +1,11 @@
-import { SagaContext, SagaState, SagaStepResult, CompensationAction, SagaStatus, SagaStep } from './interfaces/saga-state.interface';
+import {
+  SagaContext,
+  SagaState,
+  SagaStepResult,
+  CompensationAction,
+  SagaStatus,
+  SagaStep,
+} from './interfaces/saga-state.interface';
 
 export class SagaContextImpl implements SagaContext {
   constructor(public state: SagaState) {}
@@ -10,7 +17,7 @@ export class SagaContextImpl implements SagaContext {
   addStepResult(result: SagaStepResult): void {
     this.state.steps.push(result);
     this.state.currentStep = result.step;
-    
+
     if (result.status === 'failed') {
       this.state.status = SagaStatus.FAILED;
       this.state.failedAt = new Date();
@@ -25,7 +32,7 @@ export class SagaContextImpl implements SagaContext {
 
   addCompensation(compensation: CompensationAction): void {
     this.state.compensations.push(compensation);
-    
+
     if (this.state.status !== SagaStatus.COMPENSATING) {
       this.state.status = SagaStatus.COMPENSATING;
     }
@@ -51,17 +58,22 @@ export class SagaContextImpl implements SagaContext {
 
   getExecutedSteps(): SagaStep[] {
     return this.state.steps
-      .filter(step => step.status === 'success')
-      .map(step => step.step);
+      .filter((step) => step.status === 'success')
+      .map((step) => step.step);
   }
 
   getFailedStep(): SagaStep | null {
-    const failedStep = this.state.steps.find(step => step.status === 'failed');
+    const failedStep = this.state.steps.find(
+      (step) => step.status === 'failed',
+    );
     return failedStep ? failedStep.step : null;
   }
 
   shouldCompensate(): boolean {
-    return this.state.status === SagaStatus.FAILED && this.getExecutedSteps().length > 0;
+    return (
+      this.state.status === SagaStatus.FAILED &&
+      this.getExecutedSteps().length > 0
+    );
   }
 
   isCompleted(): boolean {

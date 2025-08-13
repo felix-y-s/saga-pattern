@@ -2,7 +2,7 @@ import { BaseEvent } from './interfaces/base-event';
 
 export class PurchaseInitiatedEvent implements BaseEvent {
   readonly eventType = 'PurchaseInitiated';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -18,7 +18,7 @@ export class PurchaseInitiatedEvent implements BaseEvent {
 
 export class UserValidatedEvent implements BaseEvent {
   readonly eventType = 'UserValidated';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -32,7 +32,7 @@ export class UserValidatedEvent implements BaseEvent {
 
 export class UserValidationFailedEvent implements BaseEvent {
   readonly eventType = 'UserValidationFailed';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -47,7 +47,7 @@ export class UserValidationFailedEvent implements BaseEvent {
 
 export class ItemGrantedEvent implements BaseEvent {
   readonly eventType = 'ItemGranted';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -62,7 +62,7 @@ export class ItemGrantedEvent implements BaseEvent {
 
 export class ItemGrantFailedEvent implements BaseEvent {
   readonly eventType = 'ItemGrantFailed';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -78,7 +78,7 @@ export class ItemGrantFailedEvent implements BaseEvent {
 
 export class LogRecordedEvent implements BaseEvent {
   readonly eventType = 'LogRecorded';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -92,7 +92,7 @@ export class LogRecordedEvent implements BaseEvent {
 
 export class LogFailedEvent implements BaseEvent {
   readonly eventType = 'LogFailed';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -107,7 +107,7 @@ export class LogFailedEvent implements BaseEvent {
 
 export class NotificationSentEvent implements BaseEvent {
   readonly eventType = 'NotificationSent';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -122,7 +122,7 @@ export class NotificationSentEvent implements BaseEvent {
 
 export class NotificationFailedEvent implements BaseEvent {
   readonly eventType = 'NotificationFailed';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -138,7 +138,7 @@ export class NotificationFailedEvent implements BaseEvent {
 
 export class PurchaseCompletedEvent implements BaseEvent {
   readonly eventType = 'PurchaseCompleted';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -155,7 +155,7 @@ export class PurchaseCompletedEvent implements BaseEvent {
 
 export class PurchaseFailedEvent implements BaseEvent {
   readonly eventType = 'PurchaseFailed';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -172,7 +172,7 @@ export class PurchaseFailedEvent implements BaseEvent {
 
 export class CompensationInitiatedEvent implements BaseEvent {
   readonly eventType = 'CompensationInitiated';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -186,7 +186,7 @@ export class CompensationInitiatedEvent implements BaseEvent {
 
 export class CompensationCompletedEvent implements BaseEvent {
   readonly eventType = 'CompensationCompleted';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
@@ -200,7 +200,7 @@ export class CompensationCompletedEvent implements BaseEvent {
 
 export class CompensationFailedEvent implements BaseEvent {
   readonly eventType = 'CompensationFailed';
-  
+
   constructor(
     public readonly eventId: string,
     public readonly timestamp: Date,
