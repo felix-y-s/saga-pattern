@@ -42,7 +42,15 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
   async executePurchase(request: PurchaseRequestDto): Promise<PurchaseResult> {
     const transactionId = this.eventFactory.generateTransactionId();
-    
+    return this.executePurchaseWithTransactionId(request, transactionId);
+  }
+
+  async executePurchaseFromEvent(request: PurchaseRequestDto, transactionId: string): Promise<PurchaseResult> {
+    this.logger.log(`Starting event-driven purchase orchestration: ${transactionId}`);
+    return this.executePurchaseWithTransactionId(request, transactionId);
+  }
+
+  private async executePurchaseWithTransactionId(request: PurchaseRequestDto, transactionId: string): Promise<PurchaseResult> {
     this.logger.log(`Starting purchase orchestration: ${transactionId}`);
     
     // 초기 Saga 상태 생성
@@ -349,8 +357,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
 
   async compensateSaga(transactionId: string): Promise<boolean> {
     try {
+      // WORD: compensation: 보상
       this.logger.log(`Starting saga compensation: ${transactionId}`);
-      
+
       const sagaState = await this.sagaRepository.findById(transactionId);
       if (!sagaState) {
         this.logger.error(`Saga not found for compensation: ${transactionId}`);
@@ -358,20 +367,22 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
       }
 
       const context = new SagaContextImpl(sagaState);
-      
+
       if (!context.shouldCompensate()) {
         this.logger.debug(`No compensation needed for saga: ${transactionId}`);
         return true;
       }
 
       context.updateState({ status: SagaStatus.COMPENSATING });
-      await this.sagaRepository.update(transactionId, { status: SagaStatus.COMPENSATING });
+      await this.sagaRepository.update(transactionId, {
+        status: SagaStatus.COMPENSATING,
+      });
 
       await this.publishCompensationInitiatedEvent(context);
 
       // 성공한 단계들을 역순으로 보상
       const successfulSteps = context.getExecutedSteps().reverse();
-      
+
       for (const step of successfulSteps) {
         await this.executeCompensation(context, step);
       }
@@ -380,10 +391,9 @@ export class ItemPurchaseOrchestratorService implements IOrchestratorService {
       await this.sagaRepository.update(transactionId, context.state);
 
       await this.publishCompensationCompletedEvent(context);
-      
+
       this.logger.log(`Saga compensation completed: ${transactionId}`);
       return true;
-
     } catch (error) {
       this.logger.error(`Saga compensation failed: ${transactionId}`, error);
       return false;

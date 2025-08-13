@@ -18,13 +18,13 @@ export interface SagaStepResult {
   step: SagaStep;
   status: 'success' | 'failed';
   data?: any;
+  executedAt: Date;
+  duration?: number;
   error?: {
     code: string;
     message: string;
     details?: any;
   };
-  executedAt: Date;
-  duration?: number;
 }
 
 export interface CompensationAction {
@@ -36,22 +36,38 @@ export interface CompensationAction {
 }
 
 export interface SagaState {
+  /** 분산 트랜잭션을 추적하기 위한 고유 식별자 */
   transactionId: string;
+
+  /** 현재 Saga 트랜잭션의 상태 (대기/진행중/완료/실패/보상중/보상완료) */
   status: SagaStatus;
+
+  /** 현재 실행 중인 단계 (실행 완료 시 undefined) */
   currentStep?: SagaStep;
+
+  /** 구매 요청 관련 비즈니스 데이터 */
   purchaseData: {
     userId: string;
     itemId: string;
     quantity: number;
     price: number;
   };
+
+  /** 실행된 모든 단계들의 결과 기록 (성공/실패 모두 포함) */
   steps: SagaStepResult[];
+
+  /** 실패 시 실행될 보상 액션들의 기록 */
   compensations: CompensationAction[];
+
   startedAt: Date;
+
   completedAt?: Date;
   failedAt?: Date;
+
   error?: {
+    /** 오류가 발생한 단계 */
     step: SagaStep;
+    /** 오류 코드 */
     code: string;
     message: string;
     details?: any;

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SagaState } from './interfaces/saga-state.interface';
+import { SagaState, SagaStepResult, SagaStatus } from './interfaces/saga-state.interface';
 import { SagaRepository } from './interfaces/orchestrator.interface';
 
 @Injectable()
@@ -84,5 +84,56 @@ export class SagaRepositoryService implements SagaRepository {
       compensating: sagas.filter(s => s.status === 'compensating').length,
       compensated: sagas.filter(s => s.status === 'compensated').length,
     };
+  }
+
+  // 코레오그래피 패턴을 위한 추가 메서드들
+  
+  /**
+   * 특정 단계의 결과를 업데이트
+   */
+  async updateStepResult(transactionId: string, stepResult: SagaStepResult): Promise<void> {
+    const existingSaga = this.sagas.get(transactionId);
+    if (!existingSaga) {
+      throw new Error(`Saga not found: ${transactionId}`);
+    }
+
+    // 기존 동일 단계 결과가 있다면 교체, 없다면 추가
+    const existingStepIndex = existingSaga.steps.findIndex(step => step.step === stepResult.step);
+    if (existingStepIndex >= 0) {
+      existingSaga.steps[existingStepIndex] = stepResult;
+    } else {
+      existingSaga.steps.push(stepResult);
+    }
+
+    // currentStep 업데이트
+    if (stepResult.status === 'success') {
+      existingSaga.currentStep = undefined; // 성공 시 다음 단계로 이동
+    } else {
+      existingSaga.currentStep = stepResult.step; // 실패 시 해당 단계에서 정지
+    }
+
+    this.sagas.set(transactionId, existingSaga);
+    this.logger.debug(`Step result updated: ${transactionId}, step: ${stepResult.step}, status: ${stepResult.status}`);
+  }
+
+  /**
+   * Saga 상태만 업데이트 (완료 시간 포함)
+   */
+  async updateSagaStatus(transactionId: string, status: SagaStatus, completedAt?: Date): Promise<void> {
+    const existingSaga = this.sagas.get(transactionId);
+    if (!existingSaga) {
+      throw new Error(`Saga not found: ${transactionId}`);
+    }
+
+    existingSaga.status = status;
+    
+    if (status === SagaStatus.COMPLETED && completedAt) {
+      existingSaga.completedAt = completedAt;
+    } else if (status === SagaStatus.FAILED && completedAt) {
+      existingSaga.failedAt = completedAt;
+    }
+
+    this.sagas.set(transactionId, existingSaga);
+    this.logger.debug(`Saga status updated: ${transactionId}, status: ${status}`);
   }
 }

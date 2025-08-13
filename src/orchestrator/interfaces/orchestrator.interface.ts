@@ -6,6 +6,7 @@ export interface PurchaseResult {
   transactionId: string;
   status: string;
   completedSteps: SagaStep[];
+  message?: string; // 코레오그래피 패턴을 위한 추가 메시지 필드
   error?: {
     step: SagaStep;
     code: string;

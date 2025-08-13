@@ -23,9 +23,9 @@ export class PurchaseEventHandler implements EventHandler<any> {
 
   async handle(event: any): Promise<void> {
     switch (event.eventType) {
-      case 'PurchaseInitiated':
-        await this.handlePurchaseInitiated(event as PurchaseInitiatedEvent);
-        break;
+      // case 'PurchaseInitiated':
+      //   await this.handlePurchaseInitiated(event as PurchaseInitiatedEvent);
+      //   break;
       case 'UserValidated':
         await this.handleUserValidated(event as UserValidatedEvent);
         break;
@@ -70,10 +70,10 @@ export class PurchaseEventHandler implements EventHandler<any> {
     }
   }
 
-  private async handlePurchaseInitiated(event: PurchaseInitiatedEvent): Promise<void> {
-    this.logger.log(`Purchase initiated: ${event.transactionId} for user ${event.userId}`);
-    // 추가적인 로직 (예: 메트릭 수집, 외부 시스템 알림 등)
-  }
+  // private async handlePurchaseInitiated(event: PurchaseInitiatedEvent): Promise<void> {
+  //   this.logger.log(`Purchase initiated: ${event.transactionId} for user ${event.userId}`);
+  //   // 추가적인 로직 (예: 메트릭 수집, 외부 시스템 알림 등)
+  // }
 
   private async handleUserValidated(event: UserValidatedEvent): Promise<void> {
     this.logger.log(`User validated successfully: ${event.userId} (Transaction: ${event.transactionId})`);

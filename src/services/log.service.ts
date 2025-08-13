@@ -32,7 +32,7 @@ export class LogService {
       
       // 로그 저장
       this.logs.set(logId, logEntry);
-      
+      throw new Error('TEST~~~');
       this.logger.log(`Log recorded successfully: ${logId} for transaction ${dto.transactionId}`);
       
       return {
