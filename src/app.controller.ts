@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Logger, Param, Post } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { EventBusService } from './events/event-bus.service';
 import { EventFactory } from './events/event-factory';
@@ -17,7 +18,10 @@ import {
   isOrchestrationMode,
   isChoreographyMode,
 } from './config/saga-pattern.config';
+import { PurchaseLogEntry } from './interfaces/domain-services.interface';
+import { PurchaseRequestDto, TransactionStatusResponseDto, SagaPatternConfigDto } from './dto/purchase-request.dto';
 
+@ApiTags('saga')
 @Controller()
 export class AppController {
   private readonly logger = new Logger(AppController.name);
@@ -35,20 +39,20 @@ export class AppController {
     private readonly purchaseCoordinator: PurchaseCoordinatorService, // 새로운 코레오그래피 서비스
   ) {}
 
+  @ApiOperation({ summary: 'Health Check' })
+  @ApiResponse({ status: 200, description: '서비스 상태 확인' })
   @Get()
   getHello(): string {
     return this.appService.getHello();
   }
 
+  @ApiOperation({ summary: 'EventBus 테스트' })
+  @ApiBody({ type: PurchaseRequestDto })
+  @ApiResponse({ status: 201, description: '구매 이벤트 발행 성공' })
+  @ApiResponse({ status: 400, description: '잘못된 요청 데이터' })
   @Post('test-eventbus')
   async testEventBus(
-    @Body()
-    body: {
-      userId: string;
-      itemId: string;
-      quantity: number;
-      price: number;
-    },
+    @Body() body: PurchaseRequestDto & { price: number },
   ) {
     try {
       const transactionId = this.eventFactory.generateTransactionId();
@@ -89,7 +93,8 @@ export class AppController {
       this.logger.error('Failed to publish test event:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -159,7 +164,8 @@ export class AppController {
       this.logger.error('Failed to test services:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
         results,
       };
     }
@@ -194,13 +200,21 @@ export class AppController {
       this.logger.error('Purchase failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
 
+  @ApiOperation({ summary: '사가 트랜잭션 상태 조회' })
+  @ApiParam({ name: 'transactionId', description: '트랜잭션 ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: '트랜잭션 상태 조회 성공',
+    type: TransactionStatusResponseDto,
+  })
   @Get('saga/:transactionId')
-  async getSagaState(@Param('transactionId') transactionId: string) {
+  async getSagaState(@Param('transactionId') transactionId: string): Promise<TransactionStatusResponseDto> {
     console.log(
       `🚀 | AppController | getSagaState | transactionId:`,
       transactionId,
@@ -223,7 +237,8 @@ export class AppController {
       this.logger.error(`Failed to get saga state: ${transactionId}`, error);
       return {
         found: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -240,7 +255,8 @@ export class AppController {
       this.logger.error('Failed to get saga statistics:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -262,7 +278,8 @@ export class AppController {
       return {
         success: false,
         transactionId,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -331,7 +348,8 @@ export class AppController {
       this.logger.error('🎭 Choreography purchase failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -340,6 +358,10 @@ export class AppController {
   async getChoreographyTransactionStatus(
     @Param('transactionId') transactionId: string,
   ) {
+    console.log(
+      '🚀 ~ AppController ~ getChoreographyTransactionStatus ~ transactionId:',
+      transactionId,
+    );
     try {
       const sagaState =
         await this.purchaseCoordinator.getTransactionStatus(transactionId);
@@ -372,7 +394,8 @@ export class AppController {
       );
       return {
         found: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -406,7 +429,8 @@ export class AppController {
       );
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -435,7 +459,8 @@ export class AppController {
       this.logger.error('🎭 Failed to get choreography statistics:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -454,7 +479,8 @@ export class AppController {
       this.logger.error('🎭 Failed to clear choreography transactions:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
@@ -532,8 +558,14 @@ export class AppController {
 
   // ⚙️ 설정 관리 엔드포인트들
 
+  @ApiOperation({ summary: '사가 패턴 설정 조회' })
+  @ApiResponse({ 
+    status: 200, 
+    description: '현재 사가 패턴 설정',
+    type: SagaPatternConfigDto,
+  })
   @Get('config/saga-mode')
-  getSagaPatternConfig() {
+  getSagaPatternConfig(): SagaPatternConfigDto {
     const config = getSagaPatternConfig();
 
     return {
@@ -585,8 +617,16 @@ export class AppController {
       this.logger.error('Failed to change saga pattern mode:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
+  }
+
+  @Get('logs/:userId')
+  async getLogWithUserId(
+    @Param('userId') userId: string,
+  ): Promise<PurchaseLogEntry[]> {
+    return this.logService.getLogsByUser(userId);
   }
 }

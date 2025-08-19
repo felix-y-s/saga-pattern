@@ -22,7 +22,7 @@ export class SagaRepositoryService implements SagaRepository {
 
   async findById(transactionId: string): Promise<SagaState | null> {
     const saga = this.sagas.get(transactionId);
-    return saga ? { ...saga } : null;
+    return saga ? saga : null;
   }
 
   async update(
@@ -34,7 +34,14 @@ export class SagaRepositoryService implements SagaRepository {
       throw new Error(`Saga not found: ${transactionId}`);
     }
 
-    const updatedSaga = { ...existingSaga, ...updates };
+    const updatedSaga = {
+      ...existingSaga,
+      ...updates,
+      steps: updates.steps || existingSaga.steps,
+      purchaseData: updates.purchaseData
+        ? { ...existingSaga.purchaseData, ...updates.purchaseData }
+        : existingSaga.purchaseData,
+    };
     this.sagas.set(transactionId, updatedSaga);
     this.logger.debug(
       `Saga updated: ${transactionId}, status: ${updatedSaga.status}`,

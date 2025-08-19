@@ -16,6 +16,19 @@ export interface ItemGrantResult {
   errorCode?: string;
 }
 
+export interface AtomicItemGrantResult extends ItemGrantResult {
+  /** 아이템 지급 전 재고 상태 */
+  stockSnapshot: {
+    before: number;
+    after: number;
+  };
+  /** 사용자 아이템 변화 */
+  userInventorySnapshot: {
+    before: number; // 이전 보유 수량
+    after: number; // 지급 후 수량
+  };
+}
+
 export interface LogRecordResult {
   success: boolean;
   logId: string;

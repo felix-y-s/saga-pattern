@@ -44,8 +44,8 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
 
       const { itemId, quantity } = sagaState.purchaseData;
 
-      // 아이템 지급 수행
-      const grantResult = await this.itemService.grantItem({
+      // Atomic 아이템 지급 수행 (동시성 문제 해결)
+      const grantResult = await this.itemService.grantItemAtomic({
         userId,
         itemId,
         quantity,
@@ -58,6 +58,30 @@ export class ItemGrantHandler implements EventHandler<UserValidatedEvent> {
         status: grantResult.success
           ? ('success' as const)
           : ('failed' as const),
+        stateSnapshot: grantResult.success
+          ? {
+              before: {
+                userQuantity: grantResult.userInventorySnapshot.before,
+                stock: grantResult.stockSnapshot.before,
+              },
+              after: {
+                userQuantity: grantResult.userInventorySnapshot.after,
+                stock: grantResult.stockSnapshot.after,
+              },
+              changes: [
+                {
+                  field: 'userQuantity',
+                  from: grantResult.userInventorySnapshot.before,
+                  to: grantResult.userInventorySnapshot.after,
+                },
+                {
+                  field: 'stock',
+                  from: grantResult.stockSnapshot.before,
+                  to: grantResult.stockSnapshot.after,
+                },
+              ],
+            }
+          : undefined,
         data: grantResult,
         executedAt: new Date(),
         duration: Date.now() - startTime,

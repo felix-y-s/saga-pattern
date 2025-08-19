@@ -3,9 +3,10 @@ import { ItemGrantDto } from '../dtos/purchase-request.dto';
 import {
   ItemGrantResult,
   ItemInfo,
+  AtomicItemGrantResult,
 } from '../interfaces/domain-services.interface';
 
-interface UserInventory {
+export interface UserInventory {
   itemId: string;
   quantity: number;
   grantedAt: Date[];
@@ -190,9 +191,112 @@ export class ItemService {
     return this.items.get(itemId) || null;
   }
 
+  /**
+   * 아이템 지급을 원자적으로 수행하며 before/after 상태를 함께 반환
+   * 동시성 문제를 해결하기 위한 atomic operation
+   */
+  async grantItemAtomic(dto: ItemGrantDto): Promise<AtomicItemGrantResult> {
+    const { userId, itemId, quantity, transactionId } = dto;
+
+    this.logger.log(
+      `🔒 Starting atomic item grant: ${itemId} x${quantity} to ${userId} (${transactionId})`,
+    );
+
+    // 1. 현재 상태 캡처 (atomic snapshot)
+    const itemInfo = this.items.get(itemId);
+    if (!itemInfo) {
+      return {
+        success: false,
+        userId,
+        itemId,
+        quantity,
+        grantedAt: new Date(),
+        reason: 'Item not found',
+        errorCode: 'ITEM_NOT_FOUND',
+        stockSnapshot: { before: 0, after: 0 },
+        userInventorySnapshot: { before: 0, after: 0 },
+      };
+    }
+
+    const beforeStock = itemInfo.stock;
+    const userInventory = this.userInventories.get(userId);
+    const existingItem = userInventory?.get(itemId);
+    const beforeUserQuantity = existingItem?.quantity || 0;
+
+    // 2. 재고 검증
+    if (beforeStock < quantity) {
+      return {
+        success: false,
+        userId,
+        itemId,
+        quantity,
+        grantedAt: new Date(),
+        reason: `Insufficient stock. Available: ${beforeStock}, Requested: ${quantity}`,
+        errorCode: 'INSUFFICIENT_STOCK',
+        stockSnapshot: { before: beforeStock, after: beforeStock },
+        userInventorySnapshot: {
+          before: beforeUserQuantity,
+          after: beforeUserQuantity,
+        },
+      };
+    }
+
+    // 3. Atomic 업데이트 (실제 시스템에서는 DB transaction 사용)
+    try {
+      // 재고 감소
+      itemInfo.stock = beforeStock - quantity;
+      const afterStock = itemInfo.stock;
+
+      // 사용자 인벤토리 업데이트
+      this.addToUserInventory(userId, itemId, quantity, new Date());
+      const afterUserQuantity = beforeUserQuantity + quantity;
+
+      this.logger.log(
+        `✅ Atomic grant success: ${itemId} stock ${beforeStock}→${afterStock}, user ${beforeUserQuantity}→${afterUserQuantity}`,
+      );
+
+      return {
+        success: true,
+        userId,
+        itemId,
+        quantity,
+        grantedAt: new Date(),
+        stockSnapshot: {
+          before: beforeStock,
+          after: afterStock,
+        },
+        userInventorySnapshot: {
+          before: beforeUserQuantity,
+          after: afterUserQuantity,
+        },
+      };
+    } catch (error) {
+      this.logger.error(
+        `💥 Atomic grant failed: ${itemId} to ${userId}`,
+        error,
+      );
+      return {
+        success: false,
+        userId,
+        itemId,
+        quantity,
+        grantedAt: new Date(),
+        reason: 'Grant operation failed',
+        errorCode: 'GRANT_FAILED',
+        stockSnapshot: { before: beforeStock, after: beforeStock },
+        userInventorySnapshot: {
+          before: beforeUserQuantity,
+          after: beforeUserQuantity,
+        },
+      };
+    }
+  }
+
   async getUserInventory(userId: string): Promise<UserInventory[]> {
     const inventory = this.userInventories.get(userId);
-    return inventory ? Array.from(inventory.values()) : [];
+    return inventory
+      ? JSON.parse(JSON.stringify(Array.from(inventory.values())))
+      : [];
   }
 
   private addToUserInventory(

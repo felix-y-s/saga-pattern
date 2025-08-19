@@ -145,7 +145,8 @@ export class UserService {
   }
 
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    return this.users.get(userId) || null;
+    const profile = await this.users.get(userId);
+    return profile ? JSON.parse(JSON.stringify(profile)) : null;
   }
 
   // 테스트를 위한 메소드

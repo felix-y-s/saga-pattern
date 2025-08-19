@@ -1,6 +1,7 @@
 # Saga Pattern 기반 아이템 구매 시스템
 
 NestJS를 사용하여 구현한 **Orchestration & Choreography(코레오그래피) Saga Pattern** 기반의 분산 트랜잭션 시스템입니다.
+
 - Orchestration: 중앙 집중식
 - Choreography: 분산 이벤트
 
@@ -19,12 +20,14 @@ NestJS를 사용하여 구현한 **Orchestration & Choreography(코레오그래�
 본 시스템은 게임 내 아이템 구매 과정을 **Saga Pattern**으로 구현하여, 분산 트랜잭션의 일관성과 안정성을 보장합니다.
 
 ### 구매 프로세스
+
 1. **사용자 검증**: 잔액 확인 및 차감
 2. **아이템 지급**: 재고 확인 및 사용자 인벤토리에 추가
 3. **로그 기록**: 구매 내역 저장
 4. **알림 발송**: 사용자에게 완료 알림
 
 ### 핵심 특징
+
 - 🎯 **이중 패턴 지원**: Orchestration과 Choreography 패턴 모두 구현
 - ✅ **자동 보상 트랜잭션**: 실패 시 자동으로 이전 단계들을 롤백
 - ✅ **이벤트 기반 아키텍처**: 각 단계별로 이벤트 발행 및 처리
@@ -43,50 +46,53 @@ NestJS를 사용하여 구현한 **Orchestration & Choreography(코레오그래�
                   │                  │
       ┌───────────▼──────────┐    ┌──▼─────────────────────┐
       │  ORCHESTRATION MODE  │    │   CHOREOGRAPHY MODE    │
-      │   (중앙 집중식)         │    │   (분산 이벤트 기반)       │
+      │   (중앙 집중식)      │    │   (분산 이벤트 기반)   │
       └───────────┬──────────┘    └──┬─────────────────────┘
                   │                  │
   ┌───────────────▼─────────────┐    │  ┌─────────────────────────────┐
   │ ItemPurchaseOrchestrator    │    │  │    Independent Handlers     │
-  │ (전체 워크플로우 제어)           │    │  │   (독립적 이벤트 처리)           │
+  │ (전체 워크플로우 제어)      │    │  │   (독립적 이벤트 처리)      │
   └─────────────────────────────┘    │  └─────────────────────────────┘
                   │                  │              │
                   │         ┌────────▼────────┐     │
                   │         │ Pattern Config  │     │
-                  │         │ (동적 전환 제어)   │     │
+                  │         │ (동적 전환 제어)│     │
                   │         └─────────────────┘     │
                   │                                 │
     ┌─────────────▼─────────────────────────────────▼───────────┐
     │                   EventBus System                         │
-    │              (통합 이벤트 발행/구독)                           │
+    │              (통합 이벤트 발행/구독)                      │
     └─────────────────────┬─────────────────────────────────────┘
                           │
     ┌─────────────────────▼─────────────────────────────────────┐
     │                 Domain Services                           │
     ├─────────────┬──────────────┬────────────┬─────────────────┤
     │ UserService │ ItemService  │ LogService │ NotificationService    │
-    │ (사용자검증)   │ (아이템지급)    │ (로그기록)   │   (알림발송)      │
+    │ (사용자검증)   │ (아이템지급)    │ (로그기록)   │   (알림발송)   │
     └─────────────┴──────────────┴────────────┴─────────────────┘
                           │
            ┌──────────────▼──────────────┐
            │      SagaRepository         │
-           │      (상태 저장소)             │
+           │      (상태 저장소)          │
            └─────────────────────────────┘
 ```
 
 ### 컴포넌트 구성
 
 #### 🎯 **패턴 제어 레이어**
+
 - **SagaPatternConfig**: 런타임 패턴 전환 제어
 - **Pattern Mode Detection**: 환경 변수 기반 모드 감지
 - **Event Handler Routing**: 활성 패턴에 따른 핸들러 등록
 
 #### 🎭 **Orchestration 레이어**
+
 - **ItemPurchaseOrchestrator**: Saga 워크플로우 중앙 관리
 - **PurchaseOrchestrationHandler**: PurchaseInitiated 이벤트 처리
 - **직접 서비스 호출**: 중앙집중식 비즈니스 로직 실행
 
 #### 🎪 **Choreography 레이어**
+
 - **PurchaseCoordinatorService**: 초기 이벤트 발행만 담당
 - **UserValidationHandler**: 사용자 검증 독립 처리
 - **ItemGrantHandler**: 아이템 지급 독립 처리
@@ -94,18 +100,21 @@ NestJS를 사용하여 구현한 **Orchestration & Choreography(코레오그래�
 - **NotificationHandler**: 알림 발송 독립 처리
 - **CompensationHandler**: 보상 트랜잭션 독립 처리
 
-#### 🚌 **이벤트 레이어**  
+#### 🚌 **이벤트 레이어**
+
 - **EventBus**: 통합 이벤트 발행/구독 시스템
 - **PurchaseEventHandler**: 구매 관련 이벤트 모니터링
 - **14개 이벤트 타입**: 각 단계별 성공/실패 이벤트
 
 #### 🏢 **도메인 서비스 레이어**
+
 - **UserService**: 사용자 잔액 관리 및 검증 + 보상
 - **ItemService**: 아이템 재고 관리 및 지급 + 보상
 - **LogService**: 구매 로그 기록 및 조회
 - **NotificationService**: 다채널 알림 발송
 
 #### 💾 **데이터 레이어**
+
 - **SagaRepository**: Saga 상태 저장 및 조회
 - **패턴 무관 공유**: 두 패턴 모두 동일한 상태 저장소 사용
 
@@ -120,6 +129,7 @@ NestJS를 사용하여 구현한 **Orchestration & Choreography(코레오그래�
 ## 📊 이벤트 플로우
 
 ### 🎭 Orchestration 패턴 플로우
+
 **중앙집중식**: 오케스트레이터가 각 단계를 순차적으로 실행
 
 ```
@@ -131,6 +141,7 @@ NestJS를 사용하여 구현한 **Orchestration & Choreography(코레오그래�
 ```
 
 ### 🎪 Choreography 패턴 플로우
+
 **분산 이벤트 기반**: 독립 핸들러들이 이벤트 체인으로 연결
 
 ```
@@ -142,10 +153,11 @@ NotificationHandler → NotificationSent → PurchaseCompleted
 ```
 
 ### 🔄 보상 플로우 (두 패턴 공통)
+
 **실패 시 자동 보상**: 성공한 단계들을 역순으로 롤백
 
 ```
-ItemGrantFailed → CompensationHandler → [UserService.compensate] 
+ItemGrantFailed → CompensationHandler → [UserService.compensate]
                         ↓                      ↓
               CompensationCompleted ← User Balance Restored
                         ↓
@@ -196,24 +208,27 @@ src/
 ## ⚙️ 패턴 전환 설정
 
 ### 🔄 환경 변수 설정
+
 ```bash
 # Orchestration 모드 (기본값)
 SAGA_PATTERN_MODE=orchestration npm run start:dev
 
-# Choreography 모드  
+# Choreography 모드
 SAGA_PATTERN_MODE=choreography npm run start:dev
 ```
 
 ### 🎯 런타임 패턴 확인
+
 ```bash
 # 현재 패턴 모드 확인
 curl http://localhost:3000/config/saga-mode
 
-# 패턴 비교 정보 확인  
+# 패턴 비교 정보 확인
 curl http://localhost:3000/patterns/comparison
 ```
 
 ### ⚠️ 주요 특징
+
 - **상호 배타적**: 한 번에 하나의 패턴만 활성화
 - **이벤트 충돌 방지**: 비활성 패턴의 핸들러는 완전히 비활성화
 - **공유 저장소**: 두 패턴 모두 동일한 SagaRepository 사용
@@ -233,6 +248,7 @@ curl http://localhost:3000/patterns/comparison
 ## 📋 주요 기능
 
 ### ✨ 핵심 기능
+
 - 🔄 **자동 보상 트랜잭션**: 실패 시 자동 롤백
 - 📊 **실시간 상태 추적**: Saga 진행 상황 모니터링
 - 🎯 **이벤트 기반 확장성**: 새로운 단계 쉽게 추가 가능
@@ -240,6 +256,7 @@ curl http://localhost:3000/patterns/comparison
 - 📈 **메트릭 수집**: 성공/실패 통계 및 성능 모니터링
 
 ### 🔧 개발자 도구
+
 - 📝 **완전한 타입 안전성**: TypeScript로 모든 컴포넌트 구현
 - 🧪 **포괄적인 테스트**: 단위/통합 테스트 완벽 커버리지
 - 📖 **상세한 로깅**: 각 단계별 디버깅 로그 제공

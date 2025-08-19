@@ -1,3 +1,5 @@
+import { UserInventory } from 'src/services/item.service';
+
 export enum SagaStatus {
   PENDING = 'pending',
   IN_PROGRESS = 'in_progress',
@@ -14,9 +16,31 @@ export enum SagaStep {
   NOTIFICATION = 'notification',
 }
 
+export interface StateSnapshot {
+  // 변경 전 사용자 상태
+  before: {
+    balance?: number;
+    items?: UserInventory[];
+    [key: string]: any;
+  };
+  // 변경 후 사용자 상태
+  after: {
+    balance?: number;
+    items?: UserInventory[];
+    [key: string]: any;
+  };
+  // 실제 변경된 필드만
+  changes: {
+    field: string;
+    from: any;
+    to: any;
+  }[];
+}
+
 export interface SagaStepResult {
   step: SagaStep;
   status: 'success' | 'failed';
+  stateSnapshot?: StateSnapshot;
   data?: any;
   executedAt: Date;
   duration?: number;
@@ -27,12 +51,13 @@ export interface SagaStepResult {
   };
 }
 
-export interface CompensationAction {
+export interface CompensationResult {
   step: SagaStep;
-  action: 'compensate';
+  status?: 'pending' | 'success' | 'failed'; // pending 상태는 보상 로직 실행 전에 상태를 등록 후 실행을 위해 사용
+  stateSnapshot?: StateSnapshot;
   data: any;
+  action: 'compensate';
   executedAt?: Date;
-  status?: 'pending' | 'success' | 'failed';
 }
 
 export interface SagaState {
@@ -57,7 +82,7 @@ export interface SagaState {
   steps: SagaStepResult[];
 
   /** 실패 시 실행될 보상 액션들의 기록 */
-  compensations: CompensationAction[];
+  compensations: CompensationResult[];
 
   startedAt: Date;
 
@@ -78,7 +103,7 @@ export interface SagaContext {
   state: SagaState;
   updateState(updates: Partial<SagaState>): void;
   addStepResult(result: SagaStepResult): void;
-  addCompensation(compensation: CompensationAction): void;
+  addCompensation(compensation: CompensationResult): void;
   markCompleted(): void;
   markFailed(step: SagaStep, error: any): void;
 }

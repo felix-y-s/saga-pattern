@@ -2,7 +2,7 @@ import {
   SagaContext,
   SagaState,
   SagaStepResult,
-  CompensationAction,
+  CompensationResult,
   SagaStatus,
   SagaStep,
 } from './interfaces/saga-state.interface';
@@ -30,7 +30,7 @@ export class SagaContextImpl implements SagaContext {
     }
   }
 
-  addCompensation(compensation: CompensationAction): void {
+  addCompensation(compensation: CompensationResult): void {
     this.state.compensations.push(compensation);
 
     if (this.state.status !== SagaStatus.COMPENSATING) {

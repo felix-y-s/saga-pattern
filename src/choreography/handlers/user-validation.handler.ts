@@ -46,6 +46,13 @@ export class UserValidationHandler
         throw new Error(`Saga state not found: ${transactionId}`);
       }
 
+      // step 실행전 사용자 상태 저장
+      const beforeState = await this.userService.getUserProfile(userId);
+      console.log(
+        '🚀 ~ UserValidationHandler ~ handle ~ beforeState:',
+        beforeState,
+      );
+
       // 사용자 검증 수행
       const validationResult = await this.userService.validateUser({
         userId,
@@ -53,10 +60,27 @@ export class UserValidationHandler
         requiredBalance: price,
       });
 
+      const afterState = await this.userService.getUserProfile(userId);
+      console.log(
+        '🚀 ~ UserValidationHandler ~ handle ~ afterState:',
+        afterState,
+      );
+
       // Saga 상태 업데이트
       const stepResult: SagaStepResult = {
         step: SagaStep.USER_VALIDATION,
         status: validationResult.isValid ? 'success' : 'failed',
+        stateSnapshot: {
+          before: { balance: beforeState?.balance },
+          after: { balance: afterState?.balance },
+          changes: [
+            {
+              field: 'balance',
+              from: beforeState?.balance,
+              to: afterState?.balance,
+            },
+          ],
+        },
         data: validationResult,
         executedAt: new Date(),
         duration: Date.now() - startTime,
