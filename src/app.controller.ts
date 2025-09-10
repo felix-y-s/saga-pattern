@@ -1,5 +1,19 @@
-import { Body, Controller, Get, Logger, Param, Post } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { EventBusService } from './events/event-bus.service';
 import { EventFactory } from './events/event-factory';
@@ -19,7 +33,12 @@ import {
   isChoreographyMode,
 } from './config/saga-pattern.config';
 import { PurchaseLogEntry } from './interfaces/domain-services.interface';
-import { PurchaseRequestDto, TransactionStatusResponseDto, SagaPatternConfigDto } from './dto/purchase-request.dto';
+import {
+  PurchaseRequestDto,
+  TransactionStatusResponseDto,
+  SagaPatternConfigDto,
+} from './dto/purchase-request.dto';
+import type { Response } from 'express';
 
 @ApiTags('saga')
 @Controller()
@@ -51,9 +70,7 @@ export class AppController {
   @ApiResponse({ status: 201, description: '구매 이벤트 발행 성공' })
   @ApiResponse({ status: 400, description: '잘못된 요청 데이터' })
   @Post('test-eventbus')
-  async testEventBus(
-    @Body() body: PurchaseRequestDto & { price: number },
-  ) {
+  async testEventBus(@Body() body: PurchaseRequestDto & { price: number }) {
     try {
       const transactionId = this.eventFactory.generateTransactionId();
       const eventId = this.eventFactory.generateEventId();
@@ -99,16 +116,11 @@ export class AppController {
     }
   }
 
+  @ApiOperation({ summary: '서비스 테스트' })
+  @ApiBody({ type: PurchaseRequestDto })
+  @ApiResponse({ status: 201, description: '서비스 테스트 결과' })
   @Post('test-services')
-  async testServices(
-    @Body()
-    body: {
-      userId: string;
-      itemId: string;
-      quantity: number;
-      price: number;
-    },
-  ) {
+  async testServices(@Body() body: PurchaseRequestDto & { price: number }) {
     const results = {
       user: null as any,
       item: null as any,
@@ -171,16 +183,12 @@ export class AppController {
     }
   }
 
+  @ApiOperation({ summary: '오케스트레이션 패턴으로 구매 처리' })
+  @ApiBody({ type: PurchaseRequestDto })
+  @ApiResponse({ status: 201, description: '구매 프로세스 시작 성공' })
+  @ApiResponse({ status: 500, description: '구매 처리 실패' })
   @Post('purchase')
-  async purchase(
-    @Body()
-    body: {
-      userId: string;
-      itemId: string;
-      quantity: number;
-      price: number;
-    },
-  ) {
+  async purchase(@Body() body: PurchaseRequestDto & { price: number }) {
     try {
       this.logger.log(`Saga purchase request: ${JSON.stringify(body)}`);
 
@@ -208,13 +216,15 @@ export class AppController {
 
   @ApiOperation({ summary: '사가 트랜잭션 상태 조회' })
   @ApiParam({ name: 'transactionId', description: '트랜잭션 ID' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: '트랜잭션 상태 조회 성공',
     type: TransactionStatusResponseDto,
   })
   @Get('saga/:transactionId')
-  async getSagaState(@Param('transactionId') transactionId: string): Promise<TransactionStatusResponseDto> {
+  async getSagaState(
+    @Param('transactionId') transactionId: string,
+  ): Promise<TransactionStatusResponseDto> {
     console.log(
       `🚀 | AppController | getSagaState | transactionId:`,
       transactionId,
@@ -286,26 +296,29 @@ export class AppController {
 
   // 🎭 새로운 코레오그래피 패턴 엔드포인트들
 
+  @ApiOperation({ summary: '코레오그래피 패턴으로 구매 처리' })
+  @ApiBody({ type: PurchaseRequestDto })
+  @ApiResponse({
+    status: 201,
+    description: '코레오그래피 구매 프로세스 시작 성공',
+  })
+  @ApiResponse({ status: 400, description: '코레오그래피 모드가 비활성화됨' })
+  @ApiResponse({ status: 500, description: '코레오그래피 구매 처리 실패' })
   @Post('purchase/choreography')
   async purchaseWithChoreography(
-    @Body()
-    body: {
-      userId: string;
-      itemId: string;
-      quantity: number;
-      price: number;
-    },
+    @Body() body: PurchaseRequestDto & { price: number },
+    @Res() res: Response,
   ) {
     try {
       // 현재 모드 확인
       if (!isChoreographyMode()) {
-        return {
+        return res.status(400).json({
           success: false,
           error:
             'Choreography mode is not active. Current mode: ' +
             getSagaPatternConfig().mode,
           hint: 'Use POST /config/saga-mode to switch to choreography mode, or restart app with SAGA_PATTERN_MODE=choreography',
-        };
+        });
       }
 
       this.logger.log(
@@ -321,7 +334,7 @@ export class AppController {
 
       this.logger.log(`🎭 Purchase initiated: ${result.transactionId}`);
 
-      return {
+      return res.status(201).json({
         success: true,
         transactionId: result.transactionId,
         status: result.status,
@@ -343,20 +356,28 @@ export class AppController {
             'Failures → CompensationHandler',
           ],
         },
-      };
+      });
     } catch (error) {
       this.logger.error('🎭 Choreography purchase failed:', error);
-      return {
+      return res.status(500).json({
         success: false,
         error:
           error instanceof Error ? error.message : 'Unknown error occurred',
-      };
+      });
     }
   }
 
+  @ApiOperation({ summary: '코레오그래피 트랜잭션 상태 조회' })
+  @ApiParam({ name: 'transactionId', description: '트랜잭션 ID' })
+  @ApiResponse({
+    status: 200,
+    description: '코레오그래피 트랜잭션 상태',
+    type: TransactionStatusResponseDto,
+  })
   @Get('choreography/transaction/:transactionId')
   async getChoreographyTransactionStatus(
     @Param('transactionId') transactionId: string,
+    @Res() res: Response,
   ) {
     console.log(
       '🚀 ~ AppController ~ getChoreographyTransactionStatus ~ transactionId:',
@@ -559,8 +580,8 @@ export class AppController {
   // ⚙️ 설정 관리 엔드포인트들
 
   @ApiOperation({ summary: '사가 패턴 설정 조회' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: '현재 사가 패턴 설정',
     type: SagaPatternConfigDto,
   })
@@ -580,6 +601,20 @@ export class AppController {
     };
   }
 
+  @ApiOperation({ summary: '사가 패턴 모드 변경' })
+  @ApiBody({
+    schema: {
+      properties: {
+        mode: {
+          type: 'string',
+          enum: ['orchestration', 'choreography'],
+          description: '설정할 사가 패턴 모드',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: '모드 변경 성공' })
+  @ApiResponse({ status: 400, description: '잘못된 모드' })
   @Post('config/saga-mode')
   setSagaPatternMode(@Body() body: { mode: string }) {
     try {
